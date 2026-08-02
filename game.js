@@ -100,6 +100,7 @@
 
   const heroRunImages = [1, 2, 3, 4].map((frame) => {
     const image = new Image();
+    image.fetchPriority = frame === 1 ? "high" : "low";
     image.src = `assets/longdou-run-${frame}.webp`;
     return image;
   });
@@ -107,6 +108,7 @@
   heroJumpImage.src = "assets/longdou-jump.webp";
   const clownSkateImages = [1, 2, 3, 4].map((frame) => {
     const image = new Image();
+    image.fetchPriority = frame === 1 ? "high" : "low";
     image.src = `assets/clown-skate-${frame}.webp`;
     return image;
   });
@@ -831,8 +833,10 @@
     const runRate = boostTime > 0 ? 13.2 : 9.6;
     const runPosition = elapsed * runRate;
     const runFrame = Math.floor(runPosition) % heroRunImages.length;
-    const image = airborne ? heroJumpImage : heroRunImages[runFrame];
-    const crop = airborne ? HERO_JUMP_CROP : HERO_RUN_CROPS[runFrame];
+    const jumpReady = heroJumpImage.complete && heroJumpImage.naturalWidth;
+    const selectedRunFrame = heroRunImages[runFrame].complete && heroRunImages[runFrame].naturalWidth ? runFrame : 0;
+    const image = airborne && jumpReady ? heroJumpImage : heroRunImages[selectedRunFrame];
+    const crop = airborne && jumpReady ? HERO_JUMP_CROP : HERO_RUN_CROPS[selectedRunFrame];
     const drawH = hero.h;
     const drawW = airborne ? 127 : drawH * crop.w / crop.h;
     const centerX = hero.x + hero.w / 2;
@@ -890,8 +894,9 @@
       ctx.fillText("✦", -68, -48);
       ctx.fillText("✦", 54, -55);
     } else {
-      const image = clownSkateImages[skateFrame];
-      const crop = CLOWN_SKATE_CROPS[skateFrame];
+      const selectedSkateFrame = clownSkateImages[skateFrame].complete && clownSkateImages[skateFrame].naturalWidth ? skateFrame : 0;
+      const image = clownSkateImages[selectedSkateFrame];
+      const crop = CLOWN_SKATE_CROPS[selectedSkateFrame];
       const scale = h / crop.h;
       const drawW = crop.w * scale;
       const drawX = -crop.anchorX * scale;
@@ -1106,8 +1111,7 @@
   });
 
   Promise.all([
-    backgroundImages[0], ...heroRunImages, heroJumpImage,
-    ...clownSkateImages, clownSlipImage,
+    backgroundImages[0], heroRunImages[0], clownSkateImages[0],
   ].map(waitForImage)).then(() => {
     adventureButton.disabled = false;
     adventureButton.textContent = "开始冒险";
