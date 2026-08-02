@@ -1067,7 +1067,8 @@
     }
   }
 
-  document.querySelector("#adventureButton").addEventListener("click", startAdventure);
+  const adventureButton = document.querySelector("#adventureButton");
+  adventureButton.addEventListener("click", startAdventure);
   document.querySelector("#levelSelectButton").addEventListener("click", () => { renderLevelGrid(); showScreen("levels"); });
   document.querySelector("#backToMenuButton").addEventListener("click", goMenu);
   document.querySelector("#clearProgressButton").addEventListener("click", () => {
@@ -1099,11 +1100,17 @@
   renderLevelGrid();
   updateHud();
 
-  Promise.all([
-    ...heroRunImages, heroJumpImage, ...clownSkateImages, clownSlipImage,
-    catImage, coinImage, ...backgroundImages,
-  ].map((image) => new Promise((resolve) => {
+  const waitForImage = (image) => new Promise((resolve) => {
     if (image.complete) resolve();
     else { image.addEventListener("load", resolve, { once: true }); image.addEventListener("error", resolve, { once: true }); }
-  }))).then(() => draw());
+  });
+
+  Promise.all([
+    backgroundImages[0], ...heroRunImages, heroJumpImage,
+    ...clownSkateImages, clownSlipImage,
+  ].map(waitForImage)).then(() => {
+    adventureButton.disabled = false;
+    adventureButton.textContent = "开始冒险";
+    draw();
+  });
 })();

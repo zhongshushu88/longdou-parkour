@@ -125,6 +125,7 @@ button:focus-visible { outline: 4px solid white; outline-offset: 3px; }
 .secondary-button { background: var(--sea); color: white; }
 .primary-button:hover, .secondary-button:hover { transform: translateY(-2px); box-shadow: 5px 7px 0 var(--ink); }
 .primary-button:active, .secondary-button:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--ink); }
+.primary-button:disabled { cursor: wait; filter: grayscale(.35); opacity: .78; transform: none; box-shadow: 3px 3px 0 var(--ink); }
 .text-button { display: block; margin: 14px auto 0; border: 0; background: transparent; color: inherit; text-decoration: underline; font-weight: 800; cursor: pointer; }
 .danger-text { color: #a4362d; font-size: 12px; }
 
