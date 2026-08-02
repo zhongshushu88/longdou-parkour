@@ -116,11 +116,31 @@
   catImage.src = "assets/cat.webp";
   const coinImage = new Image();
   coinImage.src = "assets/coin.webp";
-  const backgroundImages = levelData.map((level) => {
+  const backgroundImages = levelData.map((level, index) => {
     const image = new Image();
-    image.src = level.background;
+    image.fetchPriority = index === 0 ? "high" : "low";
+    if (index === 0) image.src = level.background;
     return image;
   });
+
+  function loadBackground(index) {
+    const image = backgroundImages[index];
+    if (!image.src) image.src = levelData[index].background;
+    return image;
+  }
+
+  function preloadRemainingBackgrounds() {
+    backgroundImages.forEach((image, index) => {
+      if (index > 0 && !image.src) image.src = levelData[index].background;
+    });
+  }
+
+  if (backgroundImages[0].complete && backgroundImages[0].naturalWidth) {
+    preloadRemainingBackgrounds();
+  } else {
+    backgroundImages[0].addEventListener("load", preloadRemainingBackgrounds, { once: true });
+    backgroundImages[0].addEventListener("error", preloadRemainingBackgrounds, { once: true });
+  }
 
   const HERO_RUN_CROPS = [
     { x: 68, y: 192, w: 390, h: 596 },
@@ -414,6 +434,7 @@
 
   function startLevel(index) {
     currentLevel = index;
+    loadBackground(index);
     resetRun();
     mode = "playing";
     showScreen(null);
@@ -773,7 +794,12 @@
   }
 
   function drawBackground(level) {
-    const backgroundImage = backgroundImages[currentLevel];
+    const backgroundImage = loadBackground(currentLevel);
+    if (!backgroundImage.complete || !backgroundImage.naturalWidth) {
+      ctx.fillStyle = "#73d3ee";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
     const imageW = backgroundImage.naturalWidth || backgroundImage.width || canvas.width;
     const imageH = backgroundImage.naturalHeight || backgroundImage.height || canvas.height;
     const imageRatio = imageW / imageH;

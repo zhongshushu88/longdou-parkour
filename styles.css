@@ -220,6 +220,47 @@ kbd { display: inline-block; min-width: 28px; padding: 3px 6px; border: 2px soli
   .rotate-notice { display: grid; }
 }
 
+@media (orientation: landscape) and (max-height: 520px) {
+  html, body { height: 100%; overflow: hidden; }
+  .game-shell {
+    position: relative;
+    width: min(100%, calc(100dvh * 16 / 9));
+    height: 100dvh;
+    min-height: 0;
+    padding: 0;
+    gap: 0;
+  }
+  .topbar { display: none; }
+  .status-row {
+    position: absolute;
+    z-index: 9;
+    left: 10px;
+    right: 10px;
+    top: max(8px, env(safe-area-inset-top));
+    color: white;
+    text-shadow: 1px 1px 2px #000;
+  }
+  .status-row .meter-track, .status-row .progress-track { border-color: white; }
+  .status-row span, .status-row b { font-size: 9px; }
+  .game-frame {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    flex: none;
+    aspect-ratio: 16 / 9;
+    border-radius: 0;
+    border-width: 0;
+    box-shadow: none;
+  }
+  .footer-help { display: none; }
+  .action-button { width: 62px; height: 62px; }
+  .touch-controls {
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    gap: 9px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
