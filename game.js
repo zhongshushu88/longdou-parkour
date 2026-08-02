@@ -26,6 +26,11 @@
     soundButton: document.querySelector("#soundButton"),
     mobileSoundButton: document.querySelector("#mobileSoundButton"),
     pauseButton: document.querySelector("#pauseButton"),
+    score: document.querySelector("#scoreValue"),
+    target: document.querySelector("#targetValue"),
+    best: document.querySelector("#bestValue"),
+    combo: document.querySelector("#comboValue"),
+    practiceBadge: document.querySelector("#practiceBadge"),
   };
 
   const screens = {
@@ -43,6 +48,7 @@
       caption: "从骑楼拱廊间夺回第一枚徽章",
       speed: 365,
       duration: 52,
+      targetScore: 4200,
       spawn: [1.45, 2.1],
       background: "assets/scene-1-qilou.webp",
       obstacles: ["crate", "cone", "cat"],
@@ -53,6 +59,7 @@
       caption: "穿过草坪与椰林，别让铃铛声靠近",
       speed: 395,
       duration: 55,
+      targetScore: 5000,
       spawn: [1.35, 1.95],
       background: "assets/scene-2-wanlv-park.webp",
       obstacles: ["bench", "puddle", "cat", "cone"],
@@ -63,6 +70,7 @@
       caption: "海风变强，沙滩球和椰子滚来了",
       speed: 425,
       duration: 56,
+      targetScore: 5900,
       spawn: [1.25, 1.85],
       background: "assets/scene-3-xixiu-beach.webp",
       obstacles: ["ball", "coconut", "puddle", "seagull"],
@@ -73,6 +81,7 @@
       caption: "黑色火山石让道路变得更崎岖",
       speed: 455,
       duration: 58,
+      targetScore: 6800,
       spawn: [1.15, 1.75],
       background: "assets/scene-4-volcano.webp",
       obstacles: ["rock", "barrier", "crack", "coconut"],
@@ -83,6 +92,7 @@
       caption: "华灯初上，轮滑小丑开始全速追赶",
       speed: 485,
       duration: 60,
+      targetScore: 7800,
       spawn: [1.05, 1.65],
       background: "assets/scene-5-haikou-bay-night.webp",
       obstacles: ["cone", "barrier", "puddle", "seagull", "crate"],
@@ -93,11 +103,34 @@
       caption: "最后一枚徽章就在桥下，坚持到终点！",
       speed: 520,
       duration: 64,
+      targetScore: 9000,
       spawn: [.92, 1.5],
       background: "assets/scene-6-century-bridge.webp",
       obstacles: ["barrier", "rock", "seagull", "crate", "crack", "cone"],
     },
   ];
+
+  const COURSE_PATTERNS = [
+    ["crate", "cone", "cat", "crate", "cone", "crate", "cat", "cone", "crate", "cat", "cone", "crate", "cat", "crate", "cone"],
+    ["bench", "puddle", "cone", "cat", "bench", "cone", "puddle", "cat", "cone", "bench", "cat", "puddle", "cone", "cat", "bench", "puddle"],
+    ["ball", "coconut", "puddle", "seagull", "ball", "coconut", "seagull", "puddle", "ball", "seagull", "coconut", "puddle", "ball", "coconut", "seagull", "puddle"],
+    ["rock", "crack", "coconut", "barrier", "rock", "coconut", "crack", "barrier", "coconut", "rock", "barrier", "crack", "rock", "coconut", "barrier", "crack"],
+    ["cone", "puddle", "seagull", "barrier", "crate", "cone", "seagull", "puddle", "barrier", "crate", "seagull", "cone", "barrier", "puddle", "crate", "seagull", "barrier"],
+    ["barrier", "rock", "seagull", "crate", "crack", "cone", "rock", "barrier", "seagull", "crack", "crate", "cone", "barrier", "rock", "seagull", "crate", "crack", "barrier"],
+  ];
+
+  function buildCourse(levelIndex, attempt) {
+    const level = levelData[levelIndex];
+    const pattern = COURSE_PATTERNS[levelIndex];
+    const interval = (level.duration - 8) / pattern.length;
+    const variation = [0, .14, -.12][attempt % 3];
+    return pattern.map((kind, index) => ({
+      time: 2.2 + index * interval + (index % 2 === 0 ? variation : -variation),
+      kind,
+      coinCount: index % 5 === 4 ? 3 : 4,
+      fruit: [2, 7, 12].includes(index),
+    }));
+  }
 
   const heroRunImages = [1, 2, 3, 4].map((frame) => {
     const image = new Image();
@@ -169,10 +202,14 @@
   };
 
   const defaultSave = () => ({
+    scoreVersion: 2,
     unlocked: 1,
     stars: [0, 0, 0, 0, 0, 0],
     scores: [0, 0, 0, 0, 0, 0],
     badges: [false, false, false, false, false, false],
+    failures: [0, 0, 0, 0, 0, 0],
+    attempts: [0, 0, 0, 0, 0, 0],
+    championUnlocked: false,
     introSeen: false,
     tutorialDone: false,
   });
@@ -183,7 +220,8 @@
   let elapsed = 0;
   let lastTime = performance.now();
   let animationId = 0;
-  let spawnTimer = 1.4;
+  let courseEvents = [];
+  let courseEventIndex = 0;
   let backgroundOffset = 0;
   let entities = [];
   let projectiles = [];
@@ -196,6 +234,13 @@
   let chaseDistance = 82;
   let clownStun = 0;
   let score = 0;
+  let comboStreak = 0;
+  let comboMultiplier = 1;
+  let maxComboMultiplier = 1;
+  let collisions = 0;
+  let practiceMode = false;
+  let recordAnnounced = false;
+  let championJustUnlocked = false;
   let badgeCollected = false;
   let badgeSpawned = false;
   let screenShake = 0;
@@ -329,6 +374,8 @@
         hurt: () => { this.tone(150, .22, "square", .04); },
         boost: () => { [260, 390, 520, 780].forEach((f, i) => this.tone(f, .18, "sawtooth", .025, i * .045)); },
         badge: () => { [520, 660, 780, 1040].forEach((f, i) => this.tone(f, .2, "triangle", .035, i * .08)); },
+        record: () => { [659, 784, 988].forEach((f, i) => this.tone(f, .2, "triangle", .04, i * .07)); },
+        champion: () => { [392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, .3, "triangle", .045, i * .1)); },
         win: () => { [392, 523, 659, 784].forEach((f, i) => this.tone(f, .28, "triangle", .035, i * .12)); },
         bell: () => { this.tone(1380, .18, "sine", .026); this.tone(1820, .12, "sine", .015, .05); },
       };
@@ -341,7 +388,16 @@
   function loadSave() {
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      return stored ? { ...defaultSave(), ...stored } : defaultSave();
+      if (!stored) return defaultSave();
+      const defaults = defaultSave();
+      const normalized = { ...defaults, ...stored };
+      for (const key of ["stars", "scores", "badges", "failures", "attempts"]) {
+        normalized[key] = defaults[key].map((fallback, index) => stored[key]?.[index] ?? fallback);
+      }
+      if (stored.scoreVersion !== 2) normalized.scores = [...defaults.scores];
+      normalized.scoreVersion = 2;
+      normalized.championUnlocked ||= normalized.stars.reduce((total, value) => total + value, 0) >= 18;
+      return normalized;
     } catch {
       return defaultSave();
     }
@@ -376,13 +432,19 @@
 
   function renderLevelGrid() {
     const grid = document.querySelector("#levelGrid");
+    const totalStars = save.stars.reduce((total, value) => total + value, 0);
+    document.querySelector("#starTotal").textContent = `总星数 ${totalStars} / 18${save.championUnlocked ? " · 🏆 冠军装已解锁" : ""}`;
+    document.body.classList.toggle("champion-mode", save.championUnlocked);
     grid.replaceChildren();
     levelData.forEach((level, index) => {
       const button = document.createElement("button");
       button.className = "level-card";
       button.disabled = index >= save.unlocked;
       const stars = "★".repeat(save.stars[index]) + "☆".repeat(3 - save.stars[index]);
-      button.innerHTML = `<span class="level-number">第 ${index + 1} 关</span><b>${level.name}</b><small>${button.disabled ? "🔒 尚未解锁" : stars}</small>`;
+      const detail = button.disabled
+        ? "🔒 尚未解锁"
+        : `${stars} · 目标 ${level.targetScore} · 纪录 ${save.scores[index] || "—"}`;
+      button.innerHTML = `<span class="level-number">第 ${index + 1} 关</span><b>${level.name}</b><small>${detail}</small>`;
       button.addEventListener("click", () => startLevel(index));
       grid.append(button);
     });
@@ -432,7 +494,8 @@
 
   function resetRun() {
     elapsed = 0;
-    spawnTimer = 1.6;
+    courseEventIndex = 0;
+    courseEvents = buildCourse(currentLevel, save.attempts[currentLevel]);
     entities = [];
     projectiles = [];
     particles = [];
@@ -444,6 +507,12 @@
     chaseDistance = 82;
     clownStun = 0;
     score = 0;
+    comboStreak = 0;
+    comboMultiplier = 1;
+    maxComboMultiplier = 1;
+    collisions = 0;
+    recordAnnounced = false;
+    championJustUnlocked = false;
     badgeCollected = false;
     badgeSpawned = false;
     screenShake = 0;
@@ -464,18 +533,22 @@
     updateHud();
   }
 
-  function startLevel(index) {
+  function startLevel(index, options = {}) {
     currentLevel = index;
+    practiceMode = Boolean(options.practice);
+    save.attempts[index] += 1;
+    persist();
     loadBackground(index);
     resetRun();
     mode = "playing";
     showScreen(null);
     frame.classList.add("is-playing");
+    ui.practiceBadge.hidden = !practiceMode;
     ui.levelName.textContent = `${levelData[index].place} · 第 ${index + 1} 关`;
     ui.pauseButton.textContent = "Ⅱ";
     hideTutorial();
     audio.ensure();
-    showToast(`第 ${index + 1} 关 · ${levelData[index].name}`, 1800);
+    showToast(practiceMode ? `练习模式 · 第 ${index + 1} 关` : `第 ${index + 1} 关 · ${levelData[index].name}`, 1800);
     lastTime = performance.now();
     cancelAnimationFrame(animationId);
     animationId = requestAnimationFrame(loop);
@@ -483,6 +556,7 @@
 
   function goMenu() {
     mode = "menu";
+    practiceMode = false;
     frame.classList.remove("is-playing");
     showScreen("menu");
     hideTutorial();
@@ -552,9 +626,8 @@
     }
   }
 
-  function spawnEntity() {
-    const level = levelData[currentLevel];
-    const kind = level.obstacles[Math.floor(Math.random() * level.obstacles.length)];
+  function spawnEntity(event) {
+    const kind = event.kind;
     const specs = {
       crate: [76, 72, true], cone: [50, 66, true], cat: [90, 66, false],
       bench: [110, 72, false], puddle: [112, 24, false], ball: [58, 58, true],
@@ -566,7 +639,7 @@
     const obstacle = { type: "obstacle", kind, x: 1330, y: flying ? groundY - 160 : groundY - h, w, h, small, hit: false };
     entities.push(obstacle);
 
-    const arcCoins = Math.random() < .78 ? 4 : 2;
+    const arcCoins = event.coinCount;
     for (let i = 0; i < arcCoins; i += 1) {
       entities.push({
         type: "coin", x: obstacle.x + 145 + i * 49,
@@ -575,7 +648,7 @@
       });
     }
 
-    if (Math.random() < .25 && fruit < 3) {
+    if (event.fruit && fruit < 3) {
       entities.push({ type: "fruit", x: obstacle.x + 275, y: groundY - 178, w: 40, h: 40, spin: 0 });
     }
   }
@@ -590,11 +663,37 @@
       a.y + inset < b.y + b.h - inset && a.y + a.h - inset > b.y + inset;
   }
 
+  function updateCombo() {
+    const previous = comboMultiplier;
+    comboMultiplier = comboStreak >= 10 ? 3 : comboStreak >= 5 ? 2 : 1;
+    maxComboMultiplier = Math.max(maxComboMultiplier, comboMultiplier);
+    if (comboMultiplier > previous) {
+      audio.play("record");
+      showToast(`漂亮！连击 ×${comboMultiplier}`, 900);
+    }
+  }
+
+  function rewardAction(basePoints) {
+    comboStreak += 1;
+    updateCombo();
+    const gained = basePoints * comboMultiplier;
+    score += gained;
+    return gained;
+  }
+
+  function resetCombo() {
+    comboStreak = 0;
+    comboMultiplier = 1;
+  }
+
   function damagePlayer() {
     if (hero.invulnerable > 0) return;
     energy -= 1;
-    hero.invulnerable = 2;
+    hero.invulnerable = practiceMode ? 3.2 : 2;
     chaseDistance = Math.max(0, chaseDistance - 25);
+    score = Math.max(0, score - 300);
+    collisions += 1;
+    resetCombo();
     screenShake = .38;
     audio.play("hurt");
     showToast(energy > 0 ? "小丑靠近了！" : "小丑追上来了！", 1100);
@@ -606,13 +705,14 @@
     entity.dead = true;
     if (entity.type === "coin") {
       coins += 1;
-      score += 100;
+      rewardAction(100);
       boost = Math.min(100, boost + 5);
       audio.play("coin");
       addBurst(entity.x, entity.y, "#ffd447", 5);
     } else if (entity.type === "fruit") {
       fruit = Math.min(3, fruit + 1);
-      score += 250;
+      comboStreak += 1;
+      updateCombo();
       audio.play("pickup");
       showToast("捡到海南水果！");
       if (currentLevel === 0 && !tutorialFruitShown) {
@@ -622,7 +722,7 @@
       }
     } else if (entity.type === "badge") {
       badgeCollected = true;
-      score += 1200;
+      score += 1000;
       boost = Math.min(100, boost + 30);
       audio.play("badge");
       showToast(`找回「${levelData[currentLevel].place}徽章」！`, 1900);
@@ -646,9 +746,8 @@
     const level = levelData[currentLevel];
     elapsed += dt;
     const progress = Math.min(1, elapsed / level.duration);
-    const speed = level.speed * (boostTime > 0 ? 1.42 : 1);
+    const speed = level.speed * (practiceMode ? .82 : 1) * (boostTime > 0 ? 1.42 : 1);
     backgroundOffset += speed * dt * .22;
-    score += dt * speed * .12;
 
     hero.invulnerable = Math.max(0, hero.invulnerable - dt);
     hero.landingTime = Math.max(0, hero.landingTime - dt);
@@ -677,11 +776,9 @@
     const courseX = startX + (finishX - startX) * progress;
     hero.x = courseX;
 
-    spawnTimer -= dt;
-    if (spawnTimer <= 0 && elapsed > 2) {
-      spawnEntity();
-      const [min, max] = level.spawn;
-      spawnTimer = min + Math.random() * (max - min);
+    while (courseEventIndex < courseEvents.length && elapsed >= courseEvents[courseEventIndex].time) {
+      spawnEntity(courseEvents[courseEventIndex]);
+      courseEventIndex += 1;
     }
     if (!badgeSpawned && progress > .56) spawnBadge();
 
@@ -692,7 +789,7 @@
         entity.hit = true;
         if (boostTime > 0 && entity.small) {
           entity.dead = true;
-          score += 180;
+          rewardAction(150);
           addBurst(entity.x + entity.w / 2, entity.y + entity.h / 2, "#fff3c0", 10);
           showToast("冲开障碍！", 650);
         } else {
@@ -715,7 +812,7 @@
         projectile.dead = true;
         clownStun = 2.3;
         chaseDistance = Math.min(95, chaseDistance + 24);
-        score += 450;
+        rewardAction(300);
         audio.play("hitClown");
         showToast("命中！小丑打滑了！", 1200);
         addBurst(clownX + 55, groundY - 70, "#ff785d", 15);
@@ -739,6 +836,13 @@
       tutorialBoostShown = true;
       tutorialPhase = 5;
       showTutorial("⚡", "椰风冲刺已就绪", "按 Shift 或点击加速键");
+    }
+
+    const bestScore = save.scores[currentLevel];
+    if (!practiceMode && bestScore > 0 && score > bestScore && !recordAnnounced) {
+      recordAnnounced = true;
+      audio.play("record");
+      showToast("🎉 已超过个人纪录！", 1300);
     }
 
     updateAudio(dt);
@@ -765,10 +869,10 @@
     }
   }
 
-  function calculateStars() {
+  function calculateStars(finalScore) {
     let stars = 1;
     if (badgeCollected) stars += 1;
-    if (energy >= 2 && coins >= 15) stars += 1;
+    if (!practiceMode && finalScore >= levelData[currentLevel].targetScore) stars += 1;
     return stars;
   }
 
@@ -777,21 +881,38 @@
     mode = "result";
     frame.classList.remove("is-playing");
     hideTutorial();
-    const stars = won ? calculateStars() : 0;
-    resultSnapshot = { won, stars, coins, score: Math.floor(score), badgeCollected, energy };
+    const previousBest = save.scores[currentLevel];
+    const finalScore = won ? Math.floor(score + 1000 + energy * 300) : Math.floor(score);
+    const stars = won ? calculateStars(finalScore) : 0;
+    const newRecord = won && !practiceMode && finalScore > previousBest;
+    resultSnapshot = {
+      won, stars, coins, score: finalScore, badgeCollected, energy,
+      collisions, maxComboMultiplier, previousBest, newRecord, practice: practiceMode,
+    };
 
     if (won) {
       save.stars[currentLevel] = Math.max(save.stars[currentLevel], stars);
-      save.scores[currentLevel] = Math.max(save.scores[currentLevel], Math.floor(score));
+      if (!practiceMode) save.scores[currentLevel] = Math.max(save.scores[currentLevel], finalScore);
       save.badges[currentLevel] ||= badgeCollected;
       save.unlocked = Math.max(save.unlocked, Math.min(levelData.length, currentLevel + 2));
-      persist();
+      if (!practiceMode) save.failures[currentLevel] = 0;
+      const totalStars = save.stars.reduce((total, value) => total + value, 0);
+      if (totalStars >= 18 && !save.championUnlocked) {
+        save.championUnlocked = true;
+        championJustUnlocked = true;
+      }
       audio.play("win");
+      if (newRecord) audio.play("record");
+      if (championJustUnlocked) audio.play("champion");
       if (currentLevel === levelData.length - 1) {
+        persist();
         playStory("outro", showResult);
         return;
       }
+    } else if (!practiceMode) {
+      save.failures[currentLevel] += 1;
     }
+    persist();
     showResult();
   }
 
@@ -803,13 +924,54 @@
     const stars = document.querySelector("#resultStars");
     const summary = document.querySelector("#resultSummary");
     const next = document.querySelector("#nextButton");
+    const practice = document.querySelector("#practiceButton");
+    const record = document.querySelector("#resultRecord");
+    const advice = document.querySelector("#resultAdvice");
+    const champion = document.querySelector("#championReward");
+    const level = levelData[currentLevel];
 
-    kicker.textContent = result.won ? `第 ${currentLevel + 1} 关完成` : "小丑追上来了";
+    kicker.textContent = result.practice ? "练习模式成绩" : result.won ? `第 ${currentLevel + 1} 关完成` : "小丑追上来了";
     title.textContent = result.won ? `${levelData[currentLevel].name} · 通过！` : "水果网救下了龙豆";
     stars.textContent = result.won ? `${"★ ".repeat(result.stars)}${"☆ ".repeat(3 - result.stars)}`.trim() : "☆ ☆ ☆";
-    summary.textContent = result.won
-      ? `金币 ${result.coins} · ${result.badgeCollected ? "徽章已找回" : "徽章未找到"} · 得分 ${result.score}`
-      : "重新出发吧！这一关的障碍位置每次都会变化。";
+    summary.textContent = `金币 ${result.coins} · 碰撞 ${result.collisions} 次 · 最高连击 ×${result.maxComboMultiplier} · 得分 ${result.score}`;
+
+    const goalStates = [
+      [document.querySelector("#finishGoal"), result.won, "成功到达终点"],
+      [document.querySelector("#badgeGoal"), result.badgeCollected, "找回城市徽章"],
+      [document.querySelector("#scoreGoal"), !result.practice && result.score >= level.targetScore, `达到三星目标 ${level.targetScore} 分`],
+    ];
+    goalStates.forEach(([element, complete, label]) => {
+      element.classList.toggle("is-complete", complete);
+      element.textContent = `${complete ? "★" : "☆"} ${label}`;
+    });
+
+    record.textContent = result.practice
+      ? "练习模式不记录最高分"
+      : result.newRecord
+        ? `🎉 新纪录！原纪录 ${result.previousBest || 0} → ${result.score}`
+        : `个人纪录 ${Math.max(result.previousBest, result.score) || "—"}`;
+
+    if (!result.won) {
+      advice.textContent = save.failures[currentLevel] >= 3
+        ? "已经连续失败三次，可以先进入练习模式熟悉障碍。"
+        : "下一局先减少一次碰撞，保住能量就能跑得更远。";
+    } else if (result.practice) {
+      advice.textContent = "练习完成！回到正式模式才能获得第三星和刷新纪录。";
+    } else if (!result.badgeCollected) {
+      advice.textContent = "下一局优先拿到城市徽章，就能获得第二星。";
+    } else if (result.score < level.targetScore) {
+      const difference = level.targetScore - result.score;
+      advice.textContent = result.collisions > 0
+        ? `还差 ${difference} 分获得第三星——少撞一次障碍就很接近了！`
+        : `还差 ${difference} 分获得第三星——保持连击，多收金币！`;
+    } else if (result.newRecord) {
+      advice.textContent = "三星＋新纪录！下一局挑战更长的 ×3 连击。";
+    } else {
+      advice.textContent = `已经三星！距离个人纪录还差 ${Math.max(0, result.previousBest - result.score)} 分。`;
+    }
+
+    champion.hidden = !championJustUnlocked;
+    practice.hidden = result.won || save.failures[currentLevel] < 3;
     next.hidden = !result.won || currentLevel >= levelData.length - 1;
     showScreen("result");
     renderLevelGrid();
@@ -879,6 +1041,18 @@
       ? Math.max(-.13, Math.min(.11, hero.vy / 5200))
       : Math.sin(runPosition * Math.PI / 2) * .018;
 
+    if (save.championUnlocked) {
+      ctx.save();
+      for (let i = 1; i <= 6; i += 1) {
+        ctx.globalAlpha = .34 / i;
+        ctx.fillStyle = i % 2 ? "#ffd84a" : "#fff3a0";
+        ctx.beginPath();
+        ctx.arc(centerX - 18 - i * 18, drawY + drawH * .72 + Math.sin(elapsed * 12 + i) * 7, 12 - i, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
     ctx.save();
     ctx.globalAlpha = airborne ? Math.max(.16, .38 - hero.y / groundY * .22) : .2;
     ctx.fillStyle = "#17333c";
@@ -892,6 +1066,10 @@
     ctx.translate(centerX, drawY + drawH);
     ctx.rotate(tilt);
     ctx.scale(scaleX, scaleY);
+    if (save.championUnlocked) {
+      ctx.shadowColor = "#ffd43b";
+      ctx.shadowBlur = 16;
+    }
     if (boostTime > 0) {
       ctx.globalAlpha = .2;
       for (let i = 3; i > 0; i -= 1) {
@@ -902,6 +1080,18 @@
     }
     ctx.drawImage(image, crop.x, crop.y, crop.w, crop.h,
       -drawW / 2, -drawH, drawW, drawH);
+    if (save.championUnlocked && !airborne) {
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#ffd43b";
+      ctx.strokeStyle = "#8d5d00";
+      ctx.lineWidth = 2;
+      for (const wheelX of [-drawW * .28, drawW * .28]) {
+        ctx.beginPath();
+        ctx.arc(wheelX, -3, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
     ctx.restore();
   }
 
@@ -1071,6 +1261,12 @@
     ui.energy.textContent = "🥥".repeat(Math.max(0, energy)) + "○".repeat(Math.max(0, 3 - energy));
     ui.coins.textContent = String(coins);
     ui.fruit.textContent = `${fruit} / 3`;
+    ui.score.textContent = String(Math.floor(score));
+    ui.target.textContent = String(level.targetScore);
+    ui.best.textContent = String(save.scores[currentLevel] || "—");
+    ui.combo.textContent = `连击 ×${comboMultiplier}`;
+    ui.combo.classList.toggle("is-hot", comboMultiplier > 1);
+    ui.practiceBadge.hidden = !practiceMode;
     ui.chaseFill.style.width = `${chaseDistance}%`;
     ui.chaseState.textContent = chaseDistance < 32 ? "危险" : chaseDistance < 58 ? "靠近" : "安全";
     ui.progressText.textContent = `第 ${currentLevel + 1} 关 · ${Math.floor(progress)}%`;
@@ -1119,7 +1315,8 @@
   });
   document.querySelector("#storyContinueButton").addEventListener("click", () => { const action = storyAction; storyAction = null; if (action) action(); });
   document.querySelector("#skipStoryButton").addEventListener("click", () => { const action = storyAction; storyAction = null; if (action) action(); });
-  document.querySelector("#retryButton").addEventListener("click", () => startLevel(currentLevel));
+  document.querySelector("#retryButton").addEventListener("click", () => startLevel(currentLevel, { practice: practiceMode }));
+  document.querySelector("#practiceButton").addEventListener("click", () => startLevel(currentLevel, { practice: true }));
   document.querySelector("#nextButton").addEventListener("click", nextLevel);
   document.querySelector("#resultMenuButton").addEventListener("click", goMenu);
   document.querySelector("#resumeButton").addEventListener("click", () => togglePause(false));

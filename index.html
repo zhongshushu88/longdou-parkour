@@ -4,12 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#103d4a" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
     <link rel="preload" as="image" href="assets/scene-1-qilou.webp" fetchpriority="high" />
     <link rel="preload" as="image" href="assets/longdou-run-1.webp" fetchpriority="high" />
     <link rel="preload" as="image" href="assets/clown-skate-1.webp" fetchpriority="high" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2216%22 fill=%22%23ff6f59%22/><text x=%2232%22 y=%2244%22 text-anchor=%22middle%22 font-size=%2238%22>龙</text></svg>" />
     <title>龙豆跑酷</title>
-    <link rel="stylesheet" href="styles.css?v=20260802-music" />
+    <link rel="stylesheet" href="styles.css?v=20260802-v2" />
   </head>
   <body>
     <main class="game-shell" aria-label="龙豆跑酷网页游戏">
@@ -59,6 +60,14 @@
 
         <button id="mobileSoundButton" class="icon-button mobile-sound-button" type="button" aria-label="关闭声音">🔊</button>
 
+        <div id="scoreHud" class="score-hud" aria-live="polite">
+          <span>得分 <b id="scoreValue">0</b></span>
+          <span>三星 <b id="targetValue">0</b></span>
+          <span>纪录 <b id="bestValue">0</b></span>
+          <strong id="comboValue" class="combo-value">连击 ×1</strong>
+          <em id="practiceBadge" class="practice-badge" hidden>练习模式</em>
+        </div>
+
         <div id="toast" class="toast" role="status"></div>
 
         <div id="menuScreen" class="screen menu-screen is-visible">
@@ -95,6 +104,7 @@
           <div class="panel level-panel">
             <p class="eyebrow">选择路线</p>
             <h2>海口六关</h2>
+            <p id="starTotal" class="star-total">总星数 0 / 18</p>
             <div id="levelGrid" class="level-grid"></div>
             <button id="backToMenuButton" class="text-button" type="button">返回主页</button>
             <button id="clearProgressButton" class="text-button danger-text" type="button">清除全部进度</button>
@@ -107,8 +117,20 @@
             <h2 id="resultTitle">继续加油！</h2>
             <div id="resultStars" class="result-stars">☆ ☆ ☆</div>
             <p id="resultSummary"></p>
+            <div class="star-goals" aria-label="本关三星目标">
+              <p id="finishGoal">☆ 成功到达终点</p>
+              <p id="badgeGoal">☆ 找回城市徽章</p>
+              <p id="scoreGoal">☆ 达到三星目标分</p>
+            </div>
+            <p id="resultRecord" class="result-record"></p>
+            <p id="resultAdvice" class="result-advice"></p>
+            <div id="championReward" class="champion-reward" hidden>
+              <b>🏆 海口跑酷冠军装已解锁！</b>
+              <span>金色轮滑鞋 · 金色尾迹 · 冠军徽章</span>
+            </div>
             <div class="result-actions">
-              <button id="retryButton" class="primary-button" type="button">再试一次</button>
+              <button id="retryButton" class="primary-button" type="button">立即重试</button>
+              <button id="practiceButton" class="secondary-button" type="button" hidden>进入练习模式</button>
               <button id="nextButton" class="secondary-button" type="button">下一关</button>
               <button id="resultMenuButton" class="text-button" type="button">返回主页</button>
             </div>
@@ -150,6 +172,6 @@
       <span>↻</span><b>请把手机横过来玩</b>
     </div>
 
-    <script src="game.js?v=20260802-music"></script>
+    <script src="game.js?v=20260802-v2"></script>
   </body>
 </html>
