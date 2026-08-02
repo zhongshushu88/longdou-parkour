@@ -24,6 +24,7 @@
     throwButton: document.querySelector("#throwButton"),
     boostButton: document.querySelector("#boostButton"),
     soundButton: document.querySelector("#soundButton"),
+    mobileSoundButton: document.querySelector("#mobileSoundButton"),
     pauseButton: document.querySelector("#pauseButton"),
   };
 
@@ -212,11 +213,39 @@
     constructor() {
       this.enabled = true;
       this.context = null;
+      this.output = null;
+      this.unlocked = false;
     }
 
     ensure() {
-      if (!this.context) this.context = new (window.AudioContext || window.webkitAudioContext)();
-      if (this.context.state === "suspended") this.context.resume();
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return null;
+      if (!this.context) {
+        this.context = new AudioContextClass();
+        this.output = this.context.createGain();
+        this.output.gain.value = .92;
+        this.output.connect(this.context.destination);
+        const syncState = () => { document.documentElement.dataset.audioState = this.context.state; };
+        this.context.addEventListener("statechange", syncState);
+        syncState();
+      }
+      if (this.context.state === "suspended") this.context.resume().catch(() => {});
+      return this.context;
+    }
+
+    async unlock() {
+      const context = this.ensure();
+      if (!context) return false;
+      try {
+        if (context.state !== "running") await context.resume();
+      } catch { /* the sound button can retry */ }
+      document.documentElement.dataset.audioState = context.state;
+      const running = context.state === "running";
+      if (running && !this.unlocked) {
+        this.unlocked = true;
+        this.play("ready");
+      }
+      return running;
     }
 
     tone(frequency, duration = .09, type = "sine", volume = .04, delay = 0) {
@@ -229,7 +258,7 @@
       oscillator.frequency.setValueAtTime(frequency, start);
       gain.gain.setValueAtTime(volume, start);
       gain.gain.exponentialRampToValueAtTime(.001, start + duration);
-      oscillator.connect(gain).connect(this.context.destination);
+      oscillator.connect(gain).connect(this.output);
       oscillator.start(start);
       oscillator.stop(start + duration);
     }
@@ -245,7 +274,7 @@
       oscillator.frequency.exponentialRampToValueAtTime(48, start + .12);
       gain.gain.setValueAtTime(volume, start);
       gain.gain.exponentialRampToValueAtTime(.001, start + .14);
-      oscillator.connect(gain).connect(this.context.destination);
+      oscillator.connect(gain).connect(this.output);
       oscillator.start(start);
       oscillator.stop(start + .15);
     }
@@ -265,7 +294,7 @@
       filter.frequency.value = highpass;
       gain.gain.setValueAtTime(volume, this.context.currentTime);
       gain.gain.exponentialRampToValueAtTime(.001, this.context.currentTime + duration);
-      source.connect(filter).connect(gain).connect(this.context.destination);
+      source.connect(filter).connect(gain).connect(this.output);
       source.start();
     }
 
@@ -277,20 +306,21 @@
       const leadPattern = [12, 15, 19, 17, 12, 19, 22, 19];
       const bassNote = root * 2 ** (bassPattern[step % bassPattern.length] / 12);
 
-      if (step % 4 === 0) this.kick(boosted ? .066 : .052);
-      if (step % 4 === 2) this.noise(.095, boosted ? .022 : .017, 1100);
-      else this.noise(.035, boosted ? .011 : .008, 5200);
+      if (step % 4 === 0) this.kick(boosted ? .11 : .086);
+      if (step % 4 === 2) this.noise(.095, boosted ? .042 : .032, 1100);
+      else this.noise(.035, boosted ? .022 : .016, 5200);
 
-      this.tone(bassNote, .16, "sawtooth", boosted ? .014 : .011);
+      this.tone(bassNote, .16, "sawtooth", boosted ? .032 : .025);
       if (step % 2 === 0) {
         const lead = root * 2 ** (leadPattern[(step / 2) % leadPattern.length] / 12);
-        this.tone(lead, .12, "square", boosted ? .013 : .009);
-        this.tone(lead * 1.5, .1, "triangle", boosted ? .008 : .005, .025);
+        this.tone(lead, .12, "square", boosted ? .029 : .021);
+        this.tone(lead * 1.5, .1, "triangle", boosted ? .018 : .012, .025);
       }
     }
 
     play(kind) {
       const sounds = {
+        ready: () => { this.tone(523, .09, "triangle", .05); this.tone(784, .12, "triangle", .045, .07); },
         jump: () => { this.tone(420, .08, "square", .025); this.tone(620, .08, "square", .02, .06); },
         coin: () => { this.tone(880, .09, "sine", .035); this.tone(1180, .08, "sine", .025, .04); },
         pickup: () => { this.tone(540, .1, "triangle", .04); this.tone(760, .12, "triangle", .03, .08); },
@@ -1073,7 +1103,11 @@
   }
 
   const adventureButton = document.querySelector("#adventureButton");
-  adventureButton.addEventListener("click", startAdventure);
+  adventureButton.addEventListener("click", async () => {
+    const audioReady = await audio.unlock();
+    startAdventure();
+    if (!audioReady) showToast("点一下右上角的声音按钮开启音乐", 2400);
+  });
   document.querySelector("#levelSelectButton").addEventListener("click", () => { renderLevelGrid(); showScreen("levels"); });
   document.querySelector("#backToMenuButton").addEventListener("click", goMenu);
   document.querySelector("#clearProgressButton").addEventListener("click", () => {
@@ -1093,11 +1127,18 @@
   ui.pauseButton.addEventListener("click", () => togglePause());
   ui.throwButton.addEventListener("click", (event) => { event.stopPropagation(); throwFruit(); });
   ui.boostButton.addEventListener("click", (event) => { event.stopPropagation(); triggerBoost(); });
-  ui.soundButton.addEventListener("click", () => {
+  async function toggleSound() {
     audio.enabled = !audio.enabled;
-    ui.soundButton.textContent = audio.enabled ? "🔊" : "🔇";
-    ui.soundButton.setAttribute("aria-label", audio.enabled ? "关闭声音" : "打开声音");
-  });
+    if (audio.enabled) await audio.unlock();
+    [ui.soundButton, ui.mobileSoundButton].forEach((button) => {
+      button.textContent = audio.enabled ? "🔊" : "🔇";
+      button.setAttribute("aria-label", audio.enabled ? "关闭声音" : "打开声音");
+    });
+    showToast(audio.enabled ? "音乐已开启 🔊" : "音乐已关闭", 1200);
+  }
+  ui.soundButton.addEventListener("click", toggleSound);
+  ui.mobileSoundButton.addEventListener("click", (event) => { event.stopPropagation(); toggleSound(); });
+  document.addEventListener("pointerdown", () => { if (audio.enabled) audio.unlock(); }, { capture: true, once: true });
   canvas.addEventListener("pointerdown", jump);
   window.addEventListener("keydown", handleKey, { passive: false });
   window.addEventListener("blur", () => { if (mode === "playing") togglePause(true); });
