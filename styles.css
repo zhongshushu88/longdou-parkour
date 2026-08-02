@@ -104,7 +104,7 @@ button:focus-visible { outline: 4px solid white; outline-offset: 3px; }
   overflow: hidden;
   background:
     linear-gradient(90deg, rgba(8,69,77,.05) 0 46%, rgba(8,69,77,.92) 47% 100%),
-    url("assets/haikou-background.png") center / cover;
+    url("assets/haikou-background.webp") center / cover;
 }
 .menu-art { position: absolute; inset: 0 53% 0 0; }
 .menu-art img { position: absolute; object-fit: contain; filter: drop-shadow(0 12px 8px rgba(0,0,0,.2)); }
@@ -128,7 +128,7 @@ button:focus-visible { outline: 4px solid white; outline-offset: 3px; }
 .text-button { display: block; margin: 14px auto 0; border: 0; background: transparent; color: inherit; text-decoration: underline; font-weight: 800; cursor: pointer; }
 .danger-text { color: #a4362d; font-size: 12px; }
 
-.story-screen { background: linear-gradient(180deg, rgba(12,64,72,.12), rgba(12,64,72,.82)), url("assets/haikou-background.png") center/cover; }
+.story-screen { background: linear-gradient(180deg, rgba(12,64,72,.12), rgba(12,64,72,.82)), url("assets/haikou-background.webp") center/cover; }
 .story-stage { position: absolute; inset: 0; overflow: hidden; }
 .story-stage img { position: absolute; object-fit: contain; filter: drop-shadow(0 12px 8px rgba(0,0,0,.22)); }
 .story-clown { width: 32%; height: 54%; left: 6%; top: 7%; animation: storyClown 4s ease-in-out infinite; }

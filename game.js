@@ -43,7 +43,7 @@
       speed: 365,
       duration: 52,
       spawn: [1.45, 2.1],
-      background: "assets/scene-1-qilou.png",
+      background: "assets/scene-1-qilou.webp",
       obstacles: ["crate", "cone", "cat"],
     },
     {
@@ -53,7 +53,7 @@
       speed: 395,
       duration: 55,
       spawn: [1.35, 1.95],
-      background: "assets/scene-2-wanlv-park.png",
+      background: "assets/scene-2-wanlv-park.webp",
       obstacles: ["bench", "puddle", "cat", "cone"],
     },
     {
@@ -63,7 +63,7 @@
       speed: 425,
       duration: 56,
       spawn: [1.25, 1.85],
-      background: "assets/scene-3-xixiu-beach.png",
+      background: "assets/scene-3-xixiu-beach.webp",
       obstacles: ["ball", "coconut", "puddle", "seagull"],
     },
     {
@@ -73,7 +73,7 @@
       speed: 455,
       duration: 58,
       spawn: [1.15, 1.75],
-      background: "assets/scene-4-volcano.png",
+      background: "assets/scene-4-volcano.webp",
       obstacles: ["rock", "barrier", "crack", "coconut"],
     },
     {
@@ -83,7 +83,7 @@
       speed: 485,
       duration: 60,
       spawn: [1.05, 1.65],
-      background: "assets/scene-5-haikou-bay-night.png",
+      background: "assets/scene-5-haikou-bay-night.webp",
       obstacles: ["cone", "barrier", "puddle", "seagull", "crate"],
     },
     {
@@ -93,29 +93,29 @@
       speed: 520,
       duration: 64,
       spawn: [.92, 1.5],
-      background: "assets/scene-6-century-bridge.png",
+      background: "assets/scene-6-century-bridge.webp",
       obstacles: ["barrier", "rock", "seagull", "crate", "crack", "cone"],
     },
   ];
 
   const heroRunImages = [1, 2, 3, 4].map((frame) => {
     const image = new Image();
-    image.src = `assets/longdou-run-${frame}.png`;
+    image.src = `assets/longdou-run-${frame}.webp`;
     return image;
   });
   const heroJumpImage = new Image();
-  heroJumpImage.src = "assets/longdou-jump.png";
+  heroJumpImage.src = "assets/longdou-jump.webp";
   const clownSkateImages = [1, 2, 3, 4].map((frame) => {
     const image = new Image();
-    image.src = `assets/clown-skate-${frame}.png`;
+    image.src = `assets/clown-skate-${frame}.webp`;
     return image;
   });
   const clownSlipImage = new Image();
-  clownSlipImage.src = "assets/clown-slip.png";
+  clownSlipImage.src = "assets/clown-slip.webp";
   const catImage = new Image();
-  catImage.src = "assets/cat.png";
+  catImage.src = "assets/cat.webp";
   const coinImage = new Image();
-  coinImage.src = "assets/coin.png";
+  coinImage.src = "assets/coin.webp";
   const backgroundImages = levelData.map((level) => {
     const image = new Image();
     image.src = level.background;
