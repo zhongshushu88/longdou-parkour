@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#103d4a" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2216%22 fill=%22%23ff6f59%22/><text x=%2232%22 y=%2244%22 text-anchor=%22middle%22 font-size=%2238%22>龙</text></svg>" />
+    <title>龙豆跑酷</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game-shell" aria-label="龙豆跑酷网页游戏">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">龙</span>
+          <div>
+            <h1>龙豆跑酷</h1>
+            <p id="levelName">海口大冒险</p>
+          </div>
+        </div>
+
+        <div class="hud" aria-live="polite">
+          <div class="hud-item energy" title="椰子能量">
+            <span class="hud-label">能量</span>
+            <span id="energyValue">🥥🥥🥥</span>
+          </div>
+          <div class="hud-item"><span class="hud-label">金币</span><strong id="coinValue">0</strong></div>
+          <div class="hud-item"><span class="hud-label">水果</span><strong id="fruitValue">0 / 3</strong></div>
+        </div>
+
+        <div class="top-actions">
+          <button id="soundButton" class="icon-button" type="button" aria-label="关闭声音">🔊</button>
+          <button id="pauseButton" class="icon-button" type="button" aria-label="暂停游戏">Ⅱ</button>
+        </div>
+      </header>
+
+      <section class="status-row" aria-label="游戏状态">
+        <div class="meter chase-meter">
+          <span>小丑距离</span>
+          <div class="meter-track"><i id="chaseFill"></i></div>
+          <b id="chaseState">安全</b>
+        </div>
+        <div class="level-progress" aria-label="关卡进度">
+          <span id="progressText">第 1 关 · 0%</span>
+          <div class="progress-track"><i id="progressFill"></i></div>
+        </div>
+        <div class="meter boost-meter">
+          <span>椰风冲刺</span>
+          <div class="meter-track"><i id="boostFill"></i></div>
+          <b id="boostState">0%</b>
+        </div>
+      </section>
+
+      <section id="gameFrame" class="game-frame">
+        <canvas id="gameCanvas" width="1280" height="720" aria-label="龙豆在海口奔跑的游戏画面"></canvas>
+
+        <div id="toast" class="toast" role="status"></div>
+
+        <div id="menuScreen" class="screen menu-screen is-visible">
+          <div class="menu-art" aria-hidden="true">
+            <img class="menu-clown" src="assets/clown.png" alt="" />
+            <img class="menu-hero" src="assets/longdou.png" alt="" />
+          </div>
+          <div class="menu-copy">
+            <p class="eyebrow">海口 · 六关大冒险</p>
+            <h2>龙豆跑酷</h2>
+            <p>夺回城市徽章，甩开穿轮滑鞋的小丑！</p>
+            <button id="adventureButton" class="primary-button" type="button">开始冒险</button>
+            <button id="levelSelectButton" class="text-button" type="button">选择关卡</button>
+          </div>
+          <div class="menu-tip">空格跳跃 · F 投水果 · Shift 加速</div>
+        </div>
+
+        <div id="storyScreen" class="screen story-screen" aria-live="polite">
+          <div class="story-stage">
+            <img class="story-clown" src="assets/clown.png" alt="轮滑小丑" />
+            <div class="badge-orbit" aria-hidden="true">◈ ◈ ◈</div>
+            <img class="story-hero" src="assets/longdou.png" alt="龙豆" />
+          </div>
+          <div class="story-card">
+            <p id="storyKicker" class="eyebrow">故事开始</p>
+            <h2 id="storyTitle">徽章被偷走了！</h2>
+            <p id="storyText">轮滑小丑偷走了海口的城市徽章。龙豆抢回一枚，追逐就此开始！</p>
+            <button id="storyContinueButton" class="primary-button" type="button">出发！</button>
+            <button id="skipStoryButton" class="text-button" type="button">跳过动画</button>
+          </div>
+        </div>
+
+        <div id="levelScreen" class="screen level-screen">
+          <div class="panel level-panel">
+            <p class="eyebrow">选择路线</p>
+            <h2>海口六关</h2>
+            <div id="levelGrid" class="level-grid"></div>
+            <button id="backToMenuButton" class="text-button" type="button">返回主页</button>
+            <button id="clearProgressButton" class="text-button danger-text" type="button">清除全部进度</button>
+          </div>
+        </div>
+
+        <div id="resultScreen" class="screen result-screen">
+          <div class="panel result-panel">
+            <p id="resultKicker" class="eyebrow">本关结束</p>
+            <h2 id="resultTitle">继续加油！</h2>
+            <div id="resultStars" class="result-stars">☆ ☆ ☆</div>
+            <p id="resultSummary"></p>
+            <div class="result-actions">
+              <button id="retryButton" class="primary-button" type="button">再试一次</button>
+              <button id="nextButton" class="secondary-button" type="button">下一关</button>
+              <button id="resultMenuButton" class="text-button" type="button">返回主页</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="pauseScreen" class="screen pause-screen">
+          <div class="panel compact-panel">
+            <p class="eyebrow">休息一下</p>
+            <h2>游戏暂停</h2>
+            <button id="resumeButton" class="primary-button" type="button">继续奔跑</button>
+            <button id="pauseMenuButton" class="text-button" type="button">返回主页</button>
+          </div>
+        </div>
+
+        <div id="tutorialCard" class="tutorial-card">
+          <span id="tutorialIcon">↑</span>
+          <div><b id="tutorialTitle">点击跳跃</b><p id="tutorialText">再次点击可以二段跳</p></div>
+        </div>
+
+        <div class="touch-controls" aria-label="触屏操作">
+          <button id="throwButton" class="action-button fruit-button" type="button">
+            <span>🥭</span><b>投掷</b>
+          </button>
+          <button id="boostButton" class="action-button boost-button" type="button">
+            <span>⚡</span><b>加速</b>
+          </button>
+        </div>
+      </section>
+
+      <footer class="footer-help">
+        <span><kbd>空格</kbd> 跳跃 / 二段跳</span>
+        <span><kbd>F</kbd> 投水果</span>
+        <span><kbd>Shift</kbd> 椰风冲刺</span>
+      </footer>
+    </main>
+
+    <div class="rotate-notice" role="dialog" aria-label="旋转屏幕提示">
+      <span>↻</span><b>请把手机横过来玩</b>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+</html>
