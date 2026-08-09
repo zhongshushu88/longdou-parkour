@@ -1586,9 +1586,13 @@
     const selectedRunFrame = runImages[runFrame].complete && runImages[runFrame].naturalWidth ? runFrame : 0;
     const hurtReady = hero.invulnerable > 1.35 && selectedImages.hurt?.complete && selectedImages.hurt.naturalWidth;
     const image = hurtReady ? selectedImages.hurt : airborne && jumpReady ? jumpImage : runImages[selectedRunFrame];
-    const crop = airborne && jumpReady
-      ? isLonglong ? HERO_JUMP_CROP : FULL_FRAME_CROP
-      : FULL_FRAME_CROP;
+    const completeImageCrop = {
+      x: 0,
+      y: 0,
+      w: image.naturalWidth || image.width,
+      h: image.naturalHeight || image.height,
+    };
+    const crop = airborne && jumpReady && isLonglong ? HERO_JUMP_CROP : completeImageCrop;
     const drawH = isDoudou ? 168 : selectedCharacter === "xiaoze" ? 146 : selectedCharacter === "xiaojia" ? 158 : airborne ? hero.h : 150;
     const drawW = airborne && jumpReady && isLonglong ? 127 : drawH;
     const centerX = hero.x + hero.w / 2;
