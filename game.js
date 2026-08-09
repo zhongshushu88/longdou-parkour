@@ -209,9 +209,9 @@
     "xiaoze-enter": "xiaoze-enter-v2.png",
     "xiaoze-throw": "xiaoze-throw-v2.png",
     "longlong-enter": "longlong-run-v2-1.png",
-    "longlong-throw": "longlong-run-v2-4.png",
+    "longlong-throw": "longlong-fruit-throw.png",
     "doudou-enter": "doudou-skate-v2-1.png",
-    "doudou-throw": "doudou-skate-v2-4.png",
+    "doudou-throw": "doudou-fruit-throw.png",
   };
   for (const [name, file] of Object.entries(familyImageFiles)) {
     familyImages[name] = new Image();
@@ -1671,18 +1671,21 @@
     const siblingSupport = usesSiblingSupport();
     const leftBase = -190 + ease(enter) * 355;
     const rightBase = canvas.width + 10 - ease(enter) * 420;
-    const size = siblingSupport ? 220 : 190;
+    const size = 220;
     const behindClownX = Math.max(-size * .42, clownDrawX() - size - 24);
     const alignedX = -size - 80 + ease(enter) * (behindClownX + size + 80) - finale * (size + 100);
     const leftX = siblingSupport ? leftBase + finale * 255 : alignedX;
     const rightX = siblingSupport ? rightBase - finale * 230 : alignedX;
-    const leftY = siblingSupport ? groundY - 214 : groundY - 274;
-    const rightY = siblingSupport ? groundY - 214 : groundY - 174;
+    const leftY = siblingSupport ? groundY - 214 : groundY - 330;
+    const rightY = siblingSupport ? groundY - 214 : groundY - 220;
     const throwing = phase > .52 && phase < 2.4;
+    const throwCycle = throwing ? (phase * 2.6) % 1 : 0;
+    const windingUp = throwing && throwCycle < .48;
+    const releaseDrive = throwing ? Math.sin(Math.min(1, Math.max(0, (throwCycle - .32) / .5)) * Math.PI) : 0;
     const leftKey = siblingSupport ? "xiaojia" : "longlong";
     const rightKey = siblingSupport ? "xiaoze" : "doudou";
-    const leftImage = familyImages[`${leftKey}-${throwing ? "throw" : "enter"}`];
-    const rightImage = familyImages[`${rightKey}-${throwing ? "throw" : "enter"}`];
+    const leftImage = familyImages[`${leftKey}-${windingUp ? "throw" : "enter"}`];
+    const rightImage = familyImages[`${rightKey}-${windingUp ? "throw" : "enter"}`];
 
     ctx.save();
     if (save.championUnlocked) {
@@ -1700,8 +1703,26 @@
         ctx.stroke();
       }
     }
-    ctx.drawImage(leftImage, leftX, leftY, size, size);
-    ctx.drawImage(rightImage, rightX, rightY, size, size);
+    const drawThrowingHelper = (image, x, y) => {
+      ctx.save();
+      ctx.translate(x + size * .5, y + size * .8);
+      ctx.rotate(releaseDrive * .16);
+      ctx.translate(releaseDrive * 13, 0);
+      ctx.drawImage(image, -size * .5, -size * .8, size, size);
+      if (throwing && !windingUp) {
+        ctx.strokeStyle = "rgba(255,247,179,.9)";
+        ctx.lineWidth = 5;
+        for (let i = 0; i < 3; i += 1) {
+          ctx.beginPath();
+          ctx.moveTo(size * .12 + i * 7, -size * .48 + i * 10);
+          ctx.lineTo(size * .34 + i * 9, -size * .48 + i * 10);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    };
+    drawThrowingHelper(leftImage, leftX, leftY);
+    drawThrowingHelper(rightImage, rightX, rightY);
     ctx.shadowBlur = 0;
 
     if (throwing) {
@@ -1709,8 +1730,10 @@
       for (let i = 0; i < 7; i += 1) {
         const travel = (phase * 1.35 + i * .17) % 1;
         const fromLeft = i % 2 === 0;
-        const startX = fromLeft ? leftX + 145 : rightX + 62;
-        const startY = (fromLeft ? leftY : rightY) + 90 + (i % 3) * 13;
+        const startX = siblingSupport
+          ? fromLeft ? leftX + 145 : rightX + 62
+          : (fromLeft ? leftX : rightX) + size * .78;
+        const startY = (fromLeft ? leftY : rightY) + size * .36 + (i % 3) * 9;
         const x = startX + (targetX - startX) * travel;
         const arc = Math.sin(travel * Math.PI) * (70 + i * 4);
         const fruitColors = ["#ffb126", "#8f5a2b", "#f05278", "#ffd74b"];
