@@ -378,6 +378,20 @@
       source.start();
     }
 
+    speak(text) {
+      if (!this.enabled || !("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "zh-CN";
+      utterance.rate = .92;
+      utterance.pitch = 1.08;
+      utterance.volume = 1;
+      const chineseVoice = window.speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith("zh"));
+      if (chineseVoice) utterance.voice = chineseVoice;
+      document.documentElement.dataset.lastVoice = text;
+      window.speechSynthesis.speak(utterance);
+    }
+
     music(step, level, boosted) {
       if (!this.enabled) return;
       const roots = [110, 123.47, 130.81, 146.83, 164.81, 174.61];
@@ -730,7 +744,7 @@
       audio.play("ready");
       showToast("家人能量已满！", 1200);
       if (currentLevel === 0 && !save.familyTutorialDone) {
-        showTutorial("👫", "兄妹合击已就绪", "按 G 或点击呼唤，小泽和小嘉来支援");
+        showTutorial("👫", "龙凤呈翔已就绪", "按 G 或点击呼唤，小泽和小嘉来支援");
       }
     }
   }
@@ -760,7 +774,8 @@
     persist();
     hideTutorial();
     audio.play("family");
-    showToast("小泽＋小嘉 · 兄妹合击！", 1700);
+    audio.speak("龙凤呈翔！");
+    showToast("小泽＋小嘉 · 龙凤呈翔！", 1700);
     updateHud();
   }
 
@@ -1500,7 +1515,7 @@
     ui.boostFill.style.width = `${boostTime > 0 ? 100 : boost}%`;
     ui.boostState.textContent = boostTime > 0 ? `${boostTime.toFixed(1)}秒` : boost >= 100 ? "就绪" : `${Math.floor(boost)}%`;
     ui.familyFill.style.width = `${familyPower}%`;
-    ui.familyState.textContent = familyAssistTime > 0 ? "合击中" : familyPower >= 100 ? "就绪" : `${Math.floor(familyPower)}%`;
+    ui.familyState.textContent = familyAssistTime > 0 ? "呈翔中" : familyPower >= 100 ? "就绪" : `${Math.floor(familyPower)}%`;
     ui.familyButton.hidden = familyPower < 100 || familyAssistTime > 0;
     ui.throwButton.disabled = fruit <= 0;
     ui.boostButton.disabled = boost < 100 && boostTime <= 0;
@@ -1566,6 +1581,7 @@
   async function toggleSound() {
     audio.enabled = !audio.enabled;
     if (audio.enabled) await audio.unlock();
+    else if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     [ui.soundButton, ui.mobileSoundButton].forEach((button) => {
       button.textContent = audio.enabled ? "🔊" : "🔇";
       button.setAttribute("aria-label", audio.enabled ? "关闭声音" : "打开声音");
