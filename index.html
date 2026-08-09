@@ -9,6 +9,8 @@
     <link rel="preload" as="image" href="assets/longlong-run-v2-1.png" fetchpriority="high" />
     <link rel="preload" as="image" href="assets/doudou-skate-v2-1.png" fetchpriority="high" />
     <link rel="preload" as="image" href="assets/doudou-victory-full.png" fetchpriority="high" />
+    <link rel="preload" as="image" href="assets/xiaoze-skate-1.png" fetchpriority="high" />
+    <link rel="preload" as="image" href="assets/xiaojia-skate-1.png" fetchpriority="high" />
     <link rel="preload" as="image" href="assets/clown-skate-1.webp" fetchpriority="high" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2216%22 fill=%22%23ff6f59%22/><text x=%2232%22 y=%2244%22 text-anchor=%22middle%22 font-size=%2238%22>龙</text></svg>" />
     <title>龙豆跑酷</title>
@@ -74,6 +76,7 @@
           <strong id="comboValue" class="combo-value">连击 ×1</strong>
           <em id="practiceBadge" class="practice-badge" hidden>练习模式</em>
         </div>
+        <div id="missionHud" class="mission-hud" aria-live="polite">任务：到达终点</div>
 
         <div id="toast" class="toast" role="status"></div>
 
@@ -82,21 +85,24 @@
             <img class="menu-clown" src="assets/clown.webp" alt="" />
             <img class="menu-hero menu-longlong" src="assets/longdou.webp" alt="" />
             <img class="menu-hero menu-doudou" src="assets/doudou-victory-full.png" alt="" />
+            <img class="menu-hero menu-xiaoze" src="assets/xiaoze-victory.png" alt="" />
+            <img class="menu-hero menu-xiaojia" src="assets/xiaojia-victory.png" alt="" />
           </div>
           <div class="menu-copy">
             <p class="eyebrow">海口 · 六关大冒险</p>
             <h2>龙豆跑酷</h2>
-            <p>龙龙和豆豆，夺回城市徽章！</p>
+            <p>四位小英雄，夺回城市徽章！</p>
             <button id="adventureButton" class="primary-button" type="button" disabled>正在加载游戏…</button>
+            <button id="checkpointButton" class="secondary-button checkpoint-button" type="button" hidden>从中途检查点继续</button>
             <button id="levelSelectButton" class="text-button" type="button">选择关卡</button>
           </div>
-          <div class="menu-tip">空格跳跃 · F 投水果 · Shift 加速 · G 龙凤呈祥</div>
+          <div class="menu-tip">空格跳跃 · F 投水果 · Shift 加速 · G 家人技能</div>
         </div>
 
         <div id="characterScreen" class="screen character-screen">
           <div class="panel character-panel">
             <p class="eyebrow">选择本局主角</p>
-            <h2>龙龙还是豆豆？</h2>
+            <h2>今天谁来跑？</h2>
             <div class="character-grid">
               <button id="chooseLonglongButton" class="character-card longlong-card" type="button">
                 <img src="assets/longdou.webp" alt="龙龙" />
@@ -106,11 +112,19 @@
                 <img src="assets/doudou-victory-full.png" alt="豆豆" />
                 <span><b>豆豆</b><small>高大壮实 · “看我的！”</small><em id="doudouRecord">六关纪录 0 分</em></span>
               </button>
+              <button id="chooseXiaozeButton" class="character-card xiaoze-card" type="button">
+                <img src="assets/xiaoze-victory.png" alt="小泽" />
+                <span><b>小泽</b><small>敏捷型 · 二段跳更高</small><em id="xiaozeRecord">六关纪录 0 分</em></span>
+              </button>
+              <button id="chooseXiaojiaButton" class="character-card xiaojia-card" type="button">
+                <img src="assets/xiaojia-victory.png" alt="小嘉" />
+                <span><b>小嘉</b><small>收集型 · 吸取范围更大</small><em id="xiaojiaRecord">六关纪录 0 分</em></span>
+              </button>
             </div>
             <div class="support-card">
-              <img src="assets/xiaojia-enter.png" alt="小嘉" />
-              <div><b>家人支援队</b><span>小嘉＋小泽 · 能量满后发动龙凤呈祥</span></div>
-              <img src="assets/xiaoze-enter-v2.png" alt="小泽" />
+              <img id="supportLeftImage" src="assets/xiaojia-enter.png" alt="支援角色" />
+              <div><b id="supportSkillName">龙凤呈祥</b><span id="supportSkillText">小嘉＋小泽前来清场支援</span></div>
+              <img id="supportRightImage" src="assets/xiaoze-enter-v2.png" alt="支援角色" />
             </div>
             <button id="characterBackButton" class="text-button" type="button">返回主页</button>
           </div>
@@ -136,9 +150,18 @@
             <p class="eyebrow">选择路线</p>
             <h2>海口六关</h2>
             <p id="starTotal" class="star-total">总星数 0 / 18</p>
+            <div id="familyPortraitReward" class="family-portrait" hidden>
+              <img src="assets/longdou.webp" alt="龙龙" />
+              <img src="assets/doudou-victory-full.png" alt="豆豆" />
+              <img src="assets/xiaoze-victory.png" alt="小泽" />
+              <img src="assets/xiaojia-victory.png" alt="小嘉" />
+              <b>全家冠军合影 · 彩虹轮滑已解锁</b>
+            </div>
             <div id="levelGrid" class="level-grid"></div>
+            <button id="endlessButton" class="secondary-button endless-button" type="button" hidden>进入无尽挑战</button>
             <button id="backToMenuButton" class="text-button" type="button">返回主页</button>
             <button id="clearProgressButton" class="text-button danger-text" type="button">清除全部进度</button>
+            <button id="restoreProgressButton" class="text-button" type="button" hidden>恢复改版前进度备份</button>
           </div>
         </div>
 
@@ -186,7 +209,7 @@
 
         <div class="touch-controls" aria-label="触屏操作">
           <button id="familyButton" class="action-button family-button" type="button" hidden>
-            <span>👫</span><b>龙凤呈祥</b>
+            <span>👫</span><b id="familyButtonLabel">龙凤呈祥</b>
           </button>
           <button id="throwButton" class="action-button fruit-button" type="button">
             <span>🥭</span><b>投掷</b>
@@ -201,7 +224,7 @@
         <span><kbd>空格</kbd> 跳跃 / 二段跳</span>
         <span><kbd>F</kbd> 投水果</span>
         <span><kbd>Shift</kbd> 椰风冲刺</span>
-        <span><kbd>G</kbd> 龙凤呈祥</span>
+        <span><kbd>G</kbd> 家人技能</span>
       </footer>
     </main>
 
@@ -209,6 +232,6 @@
       <span>↻</span><b>请把手机横过来玩</b>
     </div>
 
-    <script src="game.js?v=20260809-longfeng2"></script>
+    <script src="game.js?v=20260809-remake1"></script>
   </body>
 </html>

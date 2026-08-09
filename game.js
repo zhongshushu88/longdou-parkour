@@ -35,6 +35,8 @@
     familyFill: document.querySelector("#familyFill"),
     familyState: document.querySelector("#familyState"),
     familyButton: document.querySelector("#familyButton"),
+    familyButtonLabel: document.querySelector("#familyButtonLabel"),
+    mission: document.querySelector("#missionHud"),
   };
 
   const screens = {
@@ -57,71 +59,91 @@
       spawn: [1.45, 2.1],
       background: "assets/scene-1-qilou.webp",
       obstacles: ["crate", "cone", "cat"],
+      mechanic: "tutorial",
+      goals: ["成功到达终点", "找回骑楼徽章", "全程最多碰撞一次"],
     },
     {
       name: "绿园穿梭",
       place: "万绿园",
       caption: "穿过草坪与椰林，别让铃铛声靠近",
       speed: 395,
-      duration: 55,
+      duration: 78,
       targetScore: 5000,
       spawn: [1.35, 1.95],
       background: "assets/scene-2-wanlv-park.webp",
-      obstacles: ["bench", "puddle", "cat", "cone"],
+      obstacles: ["bench", "puddle", "rescueCat", "cone"],
+      mechanic: "rescue",
+      goals: ["成功到达终点", "救到三只小猫", "三只小猫全部不掉队"],
     },
     {
       name: "西秀飞跃",
       place: "西秀海滩",
       caption: "海风变强，沙滩球和椰子滚来了",
       speed: 425,
-      duration: 56,
+      duration: 82,
       targetScore: 5900,
       spawn: [1.25, 1.85],
       background: "assets/scene-3-xixiu-beach.webp",
-      obstacles: ["ball", "coconut", "puddle", "seagull"],
+      obstacles: ["ball", "coconut", "wave", "seagull"],
+      mechanic: "waves",
+      goals: ["成功到达终点", "跳过五道海浪", "全程不被海浪击中"],
     },
     {
       name: "火山石道",
       place: "火山口公园",
       caption: "黑色火山石让道路变得更崎岖",
       speed: 455,
-      duration: 58,
+      duration: 84,
       targetScore: 6800,
       spawn: [1.15, 1.75],
       background: "assets/scene-4-volcano.webp",
-      obstacles: ["rock", "barrier", "crack", "coconut"],
+      obstacles: ["fallingRock", "barrier", "crack", "coconut"],
+      mechanic: "volcano",
+      goals: ["成功到达终点", "躲过五次预警落石", "全程没有被落石击中"],
     },
     {
       name: "海湾夜跑",
       place: "海口湾",
       caption: "华灯初上，轮滑小丑开始全速追赶",
       speed: 485,
-      duration: 60,
+      duration: 86,
       targetScore: 7800,
       spawn: [1.05, 1.65],
       background: "assets/scene-5-haikou-bay-night.webp",
       obstacles: ["cone", "barrier", "puddle", "seagull", "crate"],
+      mechanic: "night",
+      goals: ["倒计时内到达终点", "完成十次连续收集", "抵达时剩余十秒"],
     },
     {
       name: "世纪桥冲刺",
       place: "世纪大桥",
       caption: "最后一枚徽章就在桥下，坚持到终点！",
       speed: 520,
-      duration: 64,
+      duration: 118,
       targetScore: 9000,
       spawn: [.92, 1.5],
       background: "assets/scene-6-century-bridge.webp",
       obstacles: ["barrier", "rock", "seagull", "crate", "crack", "cone"],
+      mechanic: "boss",
+      goals: ["夺回最后一枚徽章", "水果命中小丑三次", "无伤完成最终决战"],
     },
   ];
 
+  const CHARACTER_CONFIG = {
+    longlong: { name: "龙龙", type: "均衡型", callout: "冲呀！", cheers: ["太棒啦！", "再来一次！"], victory: "assets/longdou.webp", jump: "assets/longdou-jump.webp", supportSkill: "龙凤呈祥" },
+    doudou: { name: "豆豆", type: "力量型", callout: "看我的！", cheers: ["我赢啦！", "继续挑战！"], victory: "assets/doudou-victory-full.png", jump: "assets/doudou-jump.png", supportSkill: "龙凤呈祥" },
+    xiaoze: { name: "小泽", type: "敏捷型", callout: "我来啦！", cheers: ["我做到了！", "还要再跑！"], victory: "assets/xiaoze-victory.png", jump: "assets/xiaoze-jump.png", supportSkill: "兄弟同心" },
+    xiaojia: { name: "小嘉", type: "收集型", callout: "一起加油！", cheers: ["我们成功啦！", "三星真漂亮！"], victory: "assets/xiaojia-victory.png", jump: "assets/xiaojia-jump.png", supportSkill: "兄弟同心" },
+  };
+  const CHARACTER_KEYS = Object.keys(CHARACTER_CONFIG);
+
   const COURSE_PATTERNS = [
     ["crate", "cone", "cat", "crate", "cone", "crate", "cat", "cone", "crate", "cat", "cone", "crate", "cat", "crate", "cone"],
-    ["bench", "puddle", "cone", "cat", "bench", "cone", "puddle", "cat", "cone", "bench", "cat", "puddle", "cone", "cat", "bench", "puddle"],
-    ["ball", "coconut", "puddle", "seagull", "ball", "coconut", "seagull", "puddle", "ball", "seagull", "coconut", "puddle", "ball", "coconut", "seagull", "puddle"],
-    ["rock", "crack", "coconut", "barrier", "rock", "coconut", "crack", "barrier", "coconut", "rock", "barrier", "crack", "rock", "coconut", "barrier", "crack"],
+    ["bench", "rescueCat", "cone", "rescueCat", "puddle", "bench", "rescueCat", "cone", "puddle", "bench", "cone", "puddle", "cone", "bench", "puddle", "cone"],
+    ["ball", "wave", "coconut", "wave", "seagull", "wave", "ball", "wave", "coconut", "wave", "seagull", "wave", "ball", "coconut", "seagull", "wave"],
+    ["fallingRock", "crack", "coconut", "barrier", "fallingRock", "coconut", "crack", "fallingRock", "coconut", "fallingRock", "barrier", "crack", "fallingRock", "coconut", "barrier", "crack"],
     ["cone", "puddle", "seagull", "barrier", "crate", "cone", "seagull", "puddle", "barrier", "crate", "seagull", "cone", "barrier", "puddle", "crate", "seagull", "barrier"],
-    ["barrier", "rock", "seagull", "crate", "crack", "cone", "rock", "barrier", "seagull", "crack", "crate", "cone", "barrier", "rock", "seagull", "crate", "crack", "barrier"],
+    ["bossBanana", "fruitCache", "bossBall", "fruitCache", "bossBanana", "bossBall", "fruitCache", "bossBanana", "bossBall", "fruitCache", "bossBanana", "bossBall", "fruitCache", "bossBanana", "bossBall", "fruitCache", "bossBanana", "bossBall"],
   ];
 
   function buildCourse(levelIndex, attempt) {
@@ -156,12 +178,40 @@
   const doudouVictoryImage = new Image();
   doudouVictoryImage.fetchPriority = "high";
   doudouVictoryImage.src = "assets/doudou-victory-full.png";
+  const xiaozeRunImages = [1, 2, 3, 4, 5, 6].map((frame) => {
+    const image = new Image();
+    image.fetchPriority = frame === 1 ? "high" : "low";
+    image.src = `assets/xiaoze-skate-${frame}.png`;
+    return image;
+  });
+  const xiaojiaRunImages = [1, 2, 3, 4, 5, 6].map((frame) => {
+    const image = new Image();
+    image.fetchPriority = frame === 1 ? "high" : "low";
+    image.src = `assets/xiaojia-skate-${frame}.png`;
+    return image;
+  });
+  const xiaozeJumpImage = new Image(); xiaozeJumpImage.src = "assets/xiaoze-jump.png";
+  const xiaojiaJumpImage = new Image(); xiaojiaJumpImage.src = "assets/xiaojia-jump.png";
+  const xiaozeHurtImage = new Image(); xiaozeHurtImage.src = "assets/xiaoze-hurt.png";
+  const xiaojiaHurtImage = new Image(); xiaojiaHurtImage.src = "assets/xiaojia-hurt.png";
+  const xiaozeVictoryImage = new Image(); xiaozeVictoryImage.src = "assets/xiaoze-victory.png";
+  const xiaojiaVictoryImage = new Image(); xiaojiaVictoryImage.src = "assets/xiaojia-victory.png";
+  const characterImages = {
+    longlong: { run: longlongRunImages, jump: longlongJumpImage, hurt: longlongRunImages[0], victory: null },
+    doudou: { run: doudouRunImages, jump: doudouJumpImage, hurt: doudouRunImages[0], victory: doudouVictoryImage },
+    xiaoze: { run: xiaozeRunImages, jump: xiaozeJumpImage, hurt: xiaozeHurtImage, victory: xiaozeVictoryImage },
+    xiaojia: { run: xiaojiaRunImages, jump: xiaojiaJumpImage, hurt: xiaojiaHurtImage, victory: xiaojiaVictoryImage },
+  };
   const familyImages = {};
   const familyImageFiles = {
     "xiaojia-enter": "xiaojia-enter.png",
     "xiaojia-throw": "xiaojia-throw.png",
     "xiaoze-enter": "xiaoze-enter-v2.png",
     "xiaoze-throw": "xiaoze-throw-v2.png",
+    "longlong-enter": "longlong-run-v2-1.png",
+    "longlong-throw": "longlong-run-v2-4.png",
+    "doudou-enter": "doudou-skate-v2-1.png",
+    "doudou-throw": "doudou-skate-v2-4.png",
   };
   for (const [name, file] of Object.entries(familyImageFiles)) {
     familyImages[name] = new Image();
@@ -225,19 +275,43 @@
   };
 
   const defaultSave = () => ({
-    scoreVersion: 3,
+    scoreVersion: 4,
     unlocked: 1,
     stars: [0, 0, 0, 0, 0, 0],
     scores: [0, 0, 0, 0, 0, 0],
     scoresByCharacter: {
       longlong: [0, 0, 0, 0, 0, 0],
       doudou: [0, 0, 0, 0, 0, 0],
+      xiaoze: [0, 0, 0, 0, 0, 0],
+      xiaojia: [0, 0, 0, 0, 0, 0],
+    },
+    starsByCharacter: {
+      longlong: [0, 0, 0, 0, 0, 0],
+      doudou: [0, 0, 0, 0, 0, 0],
+      xiaoze: [0, 0, 0, 0, 0, 0],
+      xiaojia: [0, 0, 0, 0, 0, 0],
+    },
+    characterBadges: {
+      longlong: [false, false, false, false, false, false],
+      doudou: [false, false, false, false, false, false],
+      xiaoze: [false, false, false, false, false, false],
+      xiaojia: [false, false, false, false, false, false],
+    },
+    recordRoutes: {
+      longlong: [0, 0, 0, 0, 0, 0],
+      doudou: [0, 0, 0, 0, 0, 0],
+      xiaoze: [0, 0, 0, 0, 0, 0],
+      xiaojia: [0, 0, 0, 0, 0, 0],
     },
     lastCharacter: "longlong",
     badges: [false, false, false, false, false, false],
     failures: [0, 0, 0, 0, 0, 0],
     attempts: [0, 0, 0, 0, 0, 0],
     championUnlocked: false,
+    goldenTrailUnlocked: false,
+    endlessUnlocked: false,
+    familyPortraitUnlocked: false,
+    endlessBest: 0,
     introSeen: false,
     tutorialDone: false,
     familyTutorialDone: false,
@@ -245,6 +319,7 @@
 
   let save = loadSave();
   let selectedCharacter = save.lastCharacter || "longlong";
+  persist();
   let characterSelectAction = null;
   let mode = "menu";
   let currentLevel = 0;
@@ -283,6 +358,22 @@
   let tutorialFruitShown = false;
   let tutorialBoostShown = false;
   let resultSnapshot = null;
+  let strengthGuard = 0;
+  let catsRescued = 0;
+  let catsMissed = 0;
+  let wavesCleared = 0;
+  let waveHits = 0;
+  let rocksDodged = 0;
+  let rockHits = 0;
+  let nightTimeLeft = 0;
+  let nightCollectStreak = 0;
+  let maxNightCollectStreak = 0;
+  let bossHits = 0;
+  let bossFinaleReady = false;
+  let bossFinaleTriggered = false;
+  let endlessMode = false;
+  let checkpointMode = false;
+  let checkpointSaved = false;
   let storyAction = null;
   let toastTimer = 0;
   let bellTimer = 0;
@@ -295,8 +386,11 @@
       this.context = null;
       this.output = null;
       this.unlocked = false;
-      this.childVoice = new Audio("assets/longfeng-chengxiang-child.mp3");
-      this.childVoice.preload = "auto";
+      this.skillVoices = {
+        "龙凤呈祥": new Audio("assets/skill-longfeng-child.mp3"),
+        "兄弟同心": new Audio("assets/skill-xiongdi-child.mp3"),
+      };
+      Object.values(this.skillVoices).forEach((voice) => { voice.preload = "auto"; });
     }
 
     ensure() {
@@ -395,15 +489,16 @@
         if (chineseVoice) utterance.voice = chineseVoice;
         window.speechSynthesis.speak(utterance);
       };
-      this.childVoice.pause();
-      this.childVoice.currentTime = 0;
-      const playing = this.childVoice.play();
+      const key = Object.keys(this.skillVoices).find((name) => text.includes(name));
+      const voice = key ? this.skillVoices[key] : null;
+      if (!voice) return fallback();
+      Object.values(this.skillVoices).forEach((item) => { item.pause(); item.currentTime = 0; });
+      const playing = voice.play();
       if (playing?.catch) playing.catch(fallback);
     }
 
     stopVoice() {
-      this.childVoice.pause();
-      this.childVoice.currentTime = 0;
+      Object.values(this.skillVoices).forEach((voice) => { voice.pause(); voice.currentTime = 0; });
       if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     }
 
@@ -452,8 +547,12 @@
 
   function loadSave() {
     try {
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const stored = JSON.parse(raw);
       if (!stored) return defaultSave();
+      if ((stored.scoreVersion || 1) < 4 && raw && !localStorage.getItem(`${STORAGE_KEY}-backup-v3`)) {
+        localStorage.setItem(`${STORAGE_KEY}-backup-v3`, raw);
+      }
       const defaults = defaultSave();
       const normalized = { ...defaults, ...stored };
       for (const key of ["stars", "scores", "badges", "failures", "attempts"]) {
@@ -463,10 +562,28 @@
       normalized.scoresByCharacter = {
         longlong: defaults.scores.map((fallback, index) => stored.scoresByCharacter?.longlong?.[index] ?? legacyScores[index] ?? fallback),
         doudou: defaults.scores.map((fallback, index) => stored.scoresByCharacter?.doudou?.[index] ?? fallback),
+        xiaoze: defaults.scores.map((fallback, index) => stored.scoresByCharacter?.xiaoze?.[index] ?? fallback),
+        xiaojia: defaults.scores.map((fallback, index) => stored.scoresByCharacter?.xiaojia?.[index] ?? fallback),
       };
-      normalized.lastCharacter = ["longlong", "doudou"].includes(stored.lastCharacter) ? stored.lastCharacter : "longlong";
-      normalized.scoreVersion = 3;
+      normalized.starsByCharacter = Object.fromEntries(CHARACTER_KEYS.map((key) => [
+        key,
+        defaults.stars.map((fallback, index) => stored.starsByCharacter?.[key]?.[index]
+          ?? (key === "longlong" && (stored.scoreVersion || 1) < 4 ? normalized.stars[index] : fallback)),
+      ]));
+      normalized.characterBadges = Object.fromEntries(CHARACTER_KEYS.map((key) => [
+        key,
+        defaults.badges.map((fallback, index) => stored.characterBadges?.[key]?.[index] ?? (Boolean(stored.scoresByCharacter?.[key]?.[index]) || fallback)),
+      ]));
+      normalized.recordRoutes = Object.fromEntries(CHARACTER_KEYS.map((key) => [
+        key,
+        defaults.scores.map((fallback, index) => stored.recordRoutes?.[key]?.[index] ?? fallback),
+      ]));
+      normalized.lastCharacter = CHARACTER_KEYS.includes(stored.lastCharacter) ? stored.lastCharacter : "longlong";
+      normalized.scoreVersion = 4;
       normalized.championUnlocked ||= normalized.stars.reduce((total, value) => total + value, 0) >= 18;
+      normalized.goldenTrailUnlocked ||= normalized.stars.reduce((total, value) => total + value, 0) >= 12;
+      normalized.endlessUnlocked ||= normalized.championUnlocked;
+      normalized.familyPortraitUnlocked ||= Object.values(normalized.characterBadges).every((levels) => levels.every(Boolean));
       return normalized;
     } catch {
       return defaultSave();
@@ -474,19 +591,53 @@
   }
 
   function activeScores() {
-    return save.scoresByCharacter[selectedCharacter];
+    return save.scoresByCharacter[selectedCharacter] || save.scoresByCharacter.longlong;
   }
 
   function characterName() {
-    return selectedCharacter === "doudou" ? "豆豆" : "龙龙";
+    return CHARACTER_CONFIG[selectedCharacter]?.name || "龙龙";
   }
 
   function characterTotal(key) {
-    return save.scoresByCharacter[key].reduce((total, value) => total + value, 0);
+    return (save.scoresByCharacter[key] || []).reduce((total, value) => total + value, 0);
+  }
+
+  function usesSiblingSupport() {
+    return ["longlong", "doudou"].includes(selectedCharacter);
+  }
+
+  function supportSkillName() {
+    return usesSiblingSupport() ? "龙凤呈祥" : "兄弟同心";
+  }
+
+  function renderSupportPreview() {
+    const siblingSupport = usesSiblingSupport();
+    document.querySelector("#supportSkillName").textContent = supportSkillName();
+    document.querySelector("#supportSkillText").textContent = siblingSupport
+      ? "小嘉＋小泽前来清场支援"
+      : "龙龙＋豆豆击退小丑并保护主角";
+    document.querySelector("#supportLeftImage").src = siblingSupport ? "assets/xiaojia-enter.png" : "assets/longdou.webp";
+    document.querySelector("#supportRightImage").src = siblingSupport ? "assets/xiaoze-enter-v2.png" : "assets/doudou-victory-full.png";
+    ui.familyButtonLabel.textContent = supportSkillName();
   }
 
   function persist() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(save)); } catch { /* private mode */ }
+  }
+
+  function readCheckpoint() {
+    try {
+      const checkpoint = JSON.parse(sessionStorage.getItem("longdou-checkpoint-v1"));
+      if (!checkpoint || Date.now() - checkpoint.createdAt > 24 * 60 * 60 * 1000) return null;
+      return checkpoint;
+    } catch { return null; }
+  }
+
+  function renderCheckpointButton() {
+    const checkpoint = readCheckpoint();
+    const button = document.querySelector("#checkpointButton");
+    button.hidden = !checkpoint;
+    if (checkpoint) button.textContent = `继续第 ${checkpoint.level + 1} 关中途检查点`;
   }
 
   function showScreen(name) {
@@ -515,7 +666,13 @@
   function renderLevelGrid() {
     const grid = document.querySelector("#levelGrid");
     const totalStars = save.stars.reduce((total, value) => total + value, 0);
-    document.querySelector("#starTotal").textContent = `总星数 ${totalStars} / 18${save.championUnlocked ? " · 🏆 冠军装已解锁" : ""}`;
+    const rewards = [
+      save.goldenTrailUnlocked ? "✨金色尾迹" : "",
+      save.endlessUnlocked ? "♾️无尽挑战" : "",
+      save.familyPortraitUnlocked ? "🌈全家冠军" : "",
+    ].filter(Boolean).join(" · ");
+    document.querySelector("#starTotal").textContent = `总星数 ${totalStars} / 18${rewards ? ` · ${rewards}` : ""}`;
+    document.querySelector("#familyPortraitReward").hidden = !save.familyPortraitUnlocked;
     document.body.classList.toggle("champion-mode", save.championUnlocked);
     grid.replaceChildren();
     levelData.forEach((level, index) => {
@@ -523,20 +680,30 @@
       button.className = "level-card";
       button.disabled = index >= save.unlocked;
       const stars = "★".repeat(save.stars[index]) + "☆".repeat(3 - save.stars[index]);
+      const personalStars = "★".repeat(save.starsByCharacter[selectedCharacter][index]) + "☆".repeat(3 - save.starsByCharacter[selectedCharacter][index]);
+      const familyScores = CHARACTER_KEYS.map((key) => ({ key, score: save.scoresByCharacter[key][index] || 0 }));
+      const familyBest = familyScores.sort((a, b) => b.score - a.score)[0];
+      const badgeCount = CHARACTER_KEYS.filter((key) => save.characterBadges[key][index]).length;
       const detail = button.disabled
         ? "🔒 尚未解锁"
-        : `${stars} · 目标 ${level.targetScore} · ${characterName()}纪录 ${activeScores()[index] || "—"}`;
+        : `全家${stars} · ${characterName()}${personalStars} · ${badgeCount}/4徽章 · 纪录 ${familyBest.score || "—"}${familyBest.score ? `（${CHARACTER_CONFIG[familyBest.key].name}）` : ""}`;
       button.innerHTML = `<span class="level-number">第 ${index + 1} 关</span><b>${level.name}</b><small>${detail}</small>`;
       button.addEventListener("click", () => startLevel(index));
       grid.append(button);
     });
+    document.querySelector("#endlessButton").hidden = !save.endlessUnlocked;
+    document.querySelector("#restoreProgressButton").hidden = !localStorage.getItem(`${STORAGE_KEY}-backup-v3`);
   }
 
   function renderCharacterSelect() {
-    document.querySelector("#longlongRecord").textContent = `六关纪录 ${characterTotal("longlong")} 分`;
-    document.querySelector("#doudouRecord").textContent = `六关纪录 ${characterTotal("doudou")} 分`;
-    document.querySelector("#chooseLonglongButton").classList.toggle("is-selected", selectedCharacter === "longlong");
-    document.querySelector("#chooseDoudouButton").classList.toggle("is-selected", selectedCharacter === "doudou");
+    for (const key of CHARACTER_KEYS) {
+      const badges = save.characterBadges[key].filter(Boolean).length;
+      const personalStars = save.starsByCharacter[key].reduce((total, value) => total + value, 0);
+      document.querySelector(`#${key}Record`).textContent = `纪录 ${characterTotal(key)} 分 · 星 ${personalStars}/18 · 徽章 ${badges}/6`;
+      const buttonId = `choose${key[0].toUpperCase()}${key.slice(1)}Button`;
+      document.querySelector(`#${buttonId}`).classList.toggle("is-selected", selectedCharacter === key);
+    }
+    renderSupportPreview();
   }
 
   function openCharacterSelect(nextAction) {
@@ -554,14 +721,15 @@
     renderLevelGrid();
     const action = characterSelectAction;
     characterSelectAction = null;
-    showToast(key === "doudou" ? "豆豆：看我的！" : "龙龙：冲呀！", 1200);
+    renderSupportPreview();
+    showToast(`${characterName()}：${CHARACTER_CONFIG[key].callout}`, 1200);
     if (action) action();
     else goMenu();
   }
 
   function syncStoryHero() {
     const image = document.querySelector("#storyHero");
-    image.src = selectedCharacter === "doudou" ? "assets/doudou-victory-full.png" : "assets/longdou.webp";
+    image.src = CHARACTER_CONFIG[selectedCharacter].victory;
     image.alt = characterName();
   }
 
@@ -576,12 +744,12 @@
     if (kind === "intro") {
       kicker.textContent = "故事开始";
       title.textContent = "徽章被偷走了！";
-      text.textContent = `轮滑小丑偷走了海口的六枚城市徽章。${characterName()}抢回线索，小泽和小嘉也准备支援！`;
+      text.textContent = `轮滑小丑偷走了海口的六枚城市徽章。${characterName()}抢回线索，全家支援队也准备出发！`;
       button.textContent = "出发！";
     } else if (kind === "outro") {
       kicker.textContent = "海口大冒险完成";
       title.textContent = "六枚徽章回来了！";
-      text.textContent = `${characterName()}把徽章送回世纪大桥庆典。小泽和小嘉发动合击，小丑一头滑进了水果堆！`;
+      text.textContent = `${characterName()}把徽章送回世纪大桥庆典。家人发动${supportSkillName()}，小丑一头滑进了水果堆！`;
       button.textContent = "看看成绩";
     } else {
       const next = levelData[kind];
@@ -643,6 +811,20 @@
     tutorialPhase = currentLevel === 0 && !save.tutorialDone ? 1 : 0;
     tutorialFruitShown = false;
     tutorialBoostShown = false;
+    strengthGuard = selectedCharacter === "doudou" ? 1 : 0;
+    catsRescued = 0;
+    catsMissed = 0;
+    wavesCleared = 0;
+    waveHits = 0;
+    rocksDodged = 0;
+    rockHits = 0;
+    nightTimeLeft = currentLevel === 4 ? (practiceMode ? 42 : 34) : 0;
+    nightCollectStreak = 0;
+    maxNightCollectStreak = 0;
+    bossHits = 0;
+    bossFinaleReady = false;
+    bossFinaleTriggered = false;
+    checkpointSaved = false;
     hero.x = 110;
     hero.y = groundY - hero.h;
     hero.vy = 0;
@@ -660,19 +842,31 @@
   function startLevel(index, options = {}) {
     currentLevel = index;
     practiceMode = Boolean(options.practice);
-    save.attempts[index] += 1;
+    endlessMode = Boolean(options.endless);
+    checkpointMode = Boolean(options.checkpoint);
+    if (checkpointMode) practiceMode = true;
+    if (!options.retry) save.attempts[index] += 1;
     persist();
     loadBackground(index);
     resetRun();
+    if (endlessMode) nightTimeLeft = 999;
+    if (checkpointMode) {
+      elapsed = levelData[index].duration * .5;
+      const nextEvent = courseEvents.findIndex((event) => event.time >= elapsed);
+      courseEventIndex = nextEvent < 0 ? courseEvents.length : nextEvent;
+      showToast("从中途检查点继续 · 本局不计最高分", 2200);
+    }
     mode = "playing";
     showScreen(null);
     frame.classList.add("is-playing");
     ui.practiceBadge.hidden = !practiceMode;
-    ui.levelName.textContent = `${characterName()} · ${levelData[index].place} · 第 ${index + 1} 关`;
+    ui.levelName.textContent = endlessMode ? `${characterName()} · 海口无尽挑战` : `${characterName()} · ${levelData[index].place} · 第 ${index + 1} 关`;
     ui.pauseButton.textContent = "Ⅱ";
     hideTutorial();
     audio.ensure();
-    showToast(practiceMode ? `${characterName()}练习模式 · 第 ${index + 1} 关` : `${characterName()}：${selectedCharacter === "doudou" ? "看我的！" : "冲呀！"}`, 1800);
+    renderSupportPreview();
+    showToast(practiceMode ? `${characterName()}练习模式 · 第 ${index + 1} 关` : `${characterName()}：${CHARACTER_CONFIG[selectedCharacter].callout}`, 1800);
+    if (!practiceMode) audio.speak(CHARACTER_CONFIG[selectedCharacter].callout);
     lastTime = performance.now();
     cancelAnimationFrame(animationId);
     animationId = requestAnimationFrame(loop);
@@ -681,6 +875,8 @@
   function goMenu() {
     mode = "menu";
     practiceMode = false;
+    endlessMode = false;
+    checkpointMode = false;
     frame.classList.remove("is-playing");
     showScreen("menu");
     hideTutorial();
@@ -705,7 +901,8 @@
 
   function jump() {
     if (mode !== "playing" || hero.jumps >= 2) return;
-    hero.vy = hero.jumps === 0 ? -930 : -815;
+    const agileBonus = selectedCharacter === "xiaoze" ? 1.13 : 1;
+    hero.vy = (hero.jumps === 0 ? -930 : -815) * agileBonus;
     hero.airTime = 0;
     hero.landingTime = 0;
     hero.jumps += 1;
@@ -759,7 +956,8 @@
       audio.play("ready");
       showToast("家人能量已满！", 1200);
       if (currentLevel === 0 && !save.familyTutorialDone) {
-        showTutorial("👫", "龙凤呈祥已就绪", "按 G 或点击呼唤，小泽和小嘉来支援");
+        const helpers = usesSiblingSupport() ? "小泽和小嘉" : "龙龙和豆豆";
+        showTutorial("👫", `${supportSkillName()}已就绪`, `按 G 或点击呼唤，${helpers}来支援`);
       }
     }
   }
@@ -772,42 +970,68 @@
     familyPower = 0;
     familyAssistTime = 3;
     familyCalls += 1;
-    clownStun = Math.max(clownStun, 3.4);
-    chaseDistance = Math.min(95, chaseDistance + 30);
-    for (const entity of entities) {
-      const inFront = entity.x > hero.x - 30 && entity.x < hero.x + 720;
-      if (!inFront || entity.dead) continue;
-      if (entity.type === "obstacle") {
-        entity.dead = true;
-        rewardAction(150);
-        addBurst(entity.x + entity.w / 2, entity.y + entity.h / 2, "#ffd45d", 10);
-      } else if (entity.type === "coin") {
-        collect(entity);
+    const siblingSupport = usesSiblingSupport();
+    clownStun = Math.max(clownStun, siblingSupport ? 3.4 : 4);
+    chaseDistance = Math.min(95, chaseDistance + (siblingSupport ? 30 : 50));
+    if (siblingSupport) {
+      for (const entity of entities) {
+        const inFront = entity.x > hero.x - 30 && entity.x < hero.x + 720;
+        if (!inFront || entity.dead) continue;
+        if (entity.type === "obstacle") {
+          entity.dead = true;
+          if (entity.kind === "wave" && !entity.hit) wavesCleared += 1;
+          if (entity.kind === "fallingRock" && !entity.hit) rocksDodged += 1;
+          rewardAction(150);
+          addBurst(entity.x + entity.w / 2, entity.y + entity.h / 2, "#ffd45d", 10);
+        } else if (entity.type === "rescue") {
+          entity.dead = true;
+          catsRescued += 1;
+          rewardAction(350);
+        } else if (entity.type === "coin") {
+          collect(entity);
+        }
       }
+    } else {
+      hero.invulnerable = Math.max(hero.invulnerable, 5);
+      boostTime = Math.max(boostTime, 5);
     }
     save.familyTutorialDone = true;
     persist();
     hideTutorial();
     audio.play("family");
-    audio.speak("龙凤呈祥！");
-    showToast("小泽＋小嘉 · 龙凤呈祥！", 1700);
+    audio.speak(`${supportSkillName()}！`);
+    showToast(`${siblingSupport ? "小泽＋小嘉" : "龙龙＋豆豆"} · ${supportSkillName()}！`, 1700);
+    if (currentLevel === 5 && bossFinaleReady) bossFinaleTriggered = true;
     updateHud();
   }
 
   function spawnEntity(event) {
     const kind = event.kind;
+    if (kind === "fruitCache") {
+      entities.push({ type: "fruit", x: 1330, y: groundY - 120, w: 40, h: 40, spin: 0 });
+      return;
+    }
     const specs = {
       crate: [76, 72, true], cone: [50, 66, true], cat: [90, 66, false],
       bench: [110, 72, false], puddle: [112, 24, false], ball: [58, 58, true],
       coconut: [52, 52, true], seagull: [82, 42, false], rock: [92, 62, false],
       barrier: [110, 82, false], crack: [125, 18, false],
+      rescueCat: [92, 68, false], wave: [138, 58, false], fallingRock: [82, 82, false],
+      bossBanana: [82, 28, false], bossBall: [64, 64, true],
     };
     const [w, h, small] = specs[kind];
     const flying = kind === "seagull";
-    const obstacle = { type: "obstacle", kind, x: 1330, y: flying ? groundY - 160 : groundY - h, w, h, small, hit: false };
+    const isRescue = kind === "rescueCat";
+    const isFallingRock = kind === "fallingRock";
+    const obstacle = {
+      type: isRescue ? "rescue" : "obstacle", kind, x: 1330,
+      y: isFallingRock ? groundY - 245 : flying ? groundY - 160 : groundY - h,
+      targetY: groundY - h, w, h, small, hit: false,
+      warning: isFallingRock ? 1.05 : 0, clearedCounted: false,
+    };
     entities.push(obstacle);
 
-    const arcCoins = event.coinCount;
+    const arcCoins = isRescue ? 2 : event.coinCount;
     for (let i = 0; i < arcCoins; i += 1) {
       entities.push({
         type: "coin", x: obstacle.x + 145 + i * 49,
@@ -857,23 +1081,42 @@
 
   function damagePlayer() {
     if (hero.invulnerable > 0) return;
+    if (selectedCharacter === "doudou" && strengthGuard > 0) {
+      strengthGuard -= 1;
+      hero.invulnerable = 1.2;
+      screenShake = .18;
+      resetCombo();
+      audio.play("hurt");
+      showToast("豆豆力量护盾挡住了障碍！", 1200);
+      updateHud();
+      return;
+    }
     energy -= 1;
     hero.invulnerable = practiceMode ? 3.2 : 2;
     chaseDistance = Math.max(0, chaseDistance - 25);
     score = Math.max(0, score - 300);
     collisions += 1;
+    if (currentLevel === 4) nightCollectStreak = 0;
     resetCombo();
     screenShake = .38;
     audio.play("hurt");
     showToast(energy > 0 ? "小丑靠近了！" : "小丑追上来了！", 1100);
     updateHud();
-    if (energy <= 0 || chaseDistance <= 0) finishLevel(false);
+    if (energy <= 0 || chaseDistance <= 0) {
+      if (endlessMode) finishEndless();
+      else finishLevel(false);
+    }
   }
 
   function collect(entity) {
     entity.dead = true;
     if (entity.type === "coin") {
       coins += 1;
+      if (currentLevel === 4) {
+        nightTimeLeft = Math.min(45, nightTimeLeft + 1.25);
+        nightCollectStreak += 1;
+        maxNightCollectStreak = Math.max(maxNightCollectStreak, nightCollectStreak);
+      }
       rewardAction(100);
       boost = Math.min(100, boost + 5);
       audio.play("coin");
@@ -915,10 +1158,18 @@
   function update(dt) {
     const level = levelData[currentLevel];
     elapsed += dt;
-    const progress = Math.min(1, elapsed / level.duration);
-    const speed = level.speed * (practiceMode ? .82 : 1) * (boostTime > 0 ? 1.42 : 1);
+    const progress = endlessMode ? (elapsed % 60) / 60 : Math.min(1, elapsed / level.duration);
+    const endlessSpeed = endlessMode ? Math.min(1.42, 1 + elapsed / 420) : 1;
+    const speed = level.speed * (practiceMode ? .82 : 1) * (boostTime > 0 ? 1.42 : 1) * endlessSpeed;
     backgroundOffset += speed * dt * .22;
     locomotionDistance += speed * dt;
+    if (currentLevel === 4 && !endlessMode) {
+      nightTimeLeft = Math.max(0, nightTimeLeft - dt);
+      if (nightTimeLeft <= 0) {
+        finishLevel(false);
+        return;
+      }
+    }
 
     hero.invulnerable = Math.max(0, hero.invulnerable - dt);
     hero.landingTime = Math.max(0, hero.landingTime - dt);
@@ -948,16 +1199,39 @@
     const courseX = startX + (finishX - startX) * progress;
     hero.x = courseX;
 
+    if (!endlessMode && !practiceMode && !checkpointSaved && progress >= .5) {
+      checkpointSaved = true;
+      try {
+        sessionStorage.setItem("longdou-checkpoint-v1", JSON.stringify({
+          level: currentLevel, character: selectedCharacter, createdAt: Date.now(),
+        }));
+        renderCheckpointButton();
+        showToast("已保存中途检查点", 900);
+      } catch { /* session storage may be unavailable */ }
+    }
+
     while (courseEventIndex < courseEvents.length && elapsed >= courseEvents[courseEventIndex].time) {
       spawnEntity(courseEvents[courseEventIndex]);
       courseEventIndex += 1;
     }
+    if (endlessMode && courseEventIndex >= courseEvents.length) {
+      const segmentLevel = Math.floor(elapsed / 30) % 5;
+      const nextSegment = buildCourse(segmentLevel, Math.floor(elapsed / 25));
+      const offset = elapsed + 1.2;
+      courseEvents.push(...nextSegment.map((event) => ({ ...event, time: offset + (event.time - 2.2) * .62 })));
+    }
     if (!badgeSpawned && progress > .56) spawnBadge();
 
     for (const entity of entities) {
-      entity.x -= speed * dt;
+      entity.x -= speed * dt * (entity.type === "rescue" ? 1.18 : 1);
       entity.spin = (entity.spin || 0) + dt * 4;
+      if (entity.kind === "fallingRock" && entity.warning > 0) {
+        entity.warning -= dt;
+      } else if (entity.kind === "fallingRock" && entity.y < entity.targetY) {
+        entity.y = Math.min(entity.targetY, entity.y + 520 * dt);
+      }
       if (entity.type === "obstacle" && !entity.hit && intersects(hero, entity, 14)) {
+        if (entity.kind === "fallingRock" && entity.warning > 0) continue;
         entity.hit = true;
         if (boostTime > 0 && entity.small) {
           entity.dead = true;
@@ -965,12 +1239,28 @@
           addBurst(entity.x + entity.w / 2, entity.y + entity.h / 2, "#fff3c0", 10);
           showToast("冲开障碍！", 650);
         } else {
+          if (entity.kind === "wave") waveHits += 1;
+          if (entity.kind === "fallingRock") rockHits += 1;
           damagePlayer();
         }
-      } else if (["coin", "fruit", "badge"].includes(entity.type) && intersects(hero, entity, 8)) {
+      } else if (entity.type === "rescue" && intersects(hero, entity, 2)) {
+        entity.dead = true;
+        catsRescued += 1;
+        rewardAction(350);
+        audio.play("pickup");
+        showToast(`救到小猫 ${catsRescued}/3！`, 900);
+      } else if (["coin", "fruit", "badge"].includes(entity.type) && intersects(hero, entity, selectedCharacter === "xiaojia" ? -30 : 8)) {
         collect(entity);
       }
-      if (entity.x < -160) entity.dead = true;
+      if (!entity.clearedCounted && entity.x + entity.w < hero.x - 15) {
+        entity.clearedCounted = true;
+        if (entity.kind === "wave" && !entity.hit) wavesCleared += 1;
+        if (entity.kind === "fallingRock" && !entity.hit) rocksDodged += 1;
+      }
+      if (entity.x < -160) {
+        if (entity.type === "rescue" && !entity.dead) catsMissed += 1;
+        entity.dead = true;
+      }
     }
 
     const clownX = clownDrawX();
@@ -988,6 +1278,16 @@
         audio.play("hitClown");
         showToast("命中！小丑打滑了！", 1200);
         addBurst(clownX + 55, groundY - 70, "#ff785d", 15);
+        if (currentLevel === 5) {
+          bossHits = Math.min(3, bossHits + 1);
+          if (bossHits >= 3) {
+            bossFinaleReady = true;
+            familyPower = 100;
+            showToast(`第三次命中！按 G 发动${supportSkillName()}！`, 2400);
+          } else {
+            showToast(`命中小丑 ${bossHits}/3！`, 1200);
+          }
+        }
       }
       if (projectile.x < -80 || projectile.y > 760) projectile.dead = true;
     }
@@ -1019,7 +1319,12 @@
 
     updateAudio(dt);
     updateHud();
-    if (progress >= 1) finishLevel(true);
+    if (endlessMode) {
+      // Endless mode only ends when the player runs out of energy.
+    } else if (currentLevel === 5) {
+      if (bossFinaleTriggered && familyAssistTime <= .04) finishLevel(true);
+      else if (progress >= 1 && !bossFinaleTriggered) finishLevel(false);
+    } else if (progress >= 1) finishLevel(true);
   }
 
   function updateAudio(dt) {
@@ -1041,11 +1346,38 @@
     }
   }
 
-  function calculateStars(finalScore) {
-    let stars = 1;
-    if (badgeCollected) stars += 1;
-    if (!practiceMode && finalScore >= levelData[currentLevel].targetScore) stars += 1;
-    return stars;
+  function missionStatus() {
+    if (currentLevel === 0) return [badgeCollected, collisions <= 1];
+    if (currentLevel === 1) return [catsRescued >= 3, catsRescued >= 3 && catsMissed === 0];
+    if (currentLevel === 2) return [wavesCleared >= 5, waveHits === 0];
+    if (currentLevel === 3) return [rocksDodged >= 5, rockHits === 0];
+    if (currentLevel === 4) return [maxNightCollectStreak >= 10, nightTimeLeft >= 10];
+    return [bossHits >= 3, bossHits >= 3 && collisions === 0];
+  }
+
+  function calculateStars() {
+    const [featureComplete, masteryComplete] = missionStatus();
+    return 1 + Number(featureComplete) + Number(!practiceMode && masteryComplete);
+  }
+
+  function finishEndless() {
+    if (mode !== "playing") return;
+    mode = "result";
+    frame.classList.remove("is-playing");
+    hideTutorial();
+    sessionStorage.removeItem("longdou-checkpoint-v1");
+    renderCheckpointButton();
+    const finalScore = Math.floor(score + elapsed * 25);
+    const previousBest = save.endlessBest || 0;
+    save.endlessBest = Math.max(previousBest, finalScore);
+    persist();
+    resultSnapshot = {
+      endless: true, won: false, stars: 0, coins, score: finalScore, badgeCollected: false,
+      energy, collisions, maxComboMultiplier, previousBest, newRecord: finalScore > previousBest,
+      practice: false, character: characterName(), familyCalls, missionStatus: [false, false],
+      elapsed,
+    };
+    showResult();
   }
 
   function finishLevel(won) {
@@ -1053,28 +1385,42 @@
     mode = "result";
     frame.classList.remove("is-playing");
     hideTutorial();
+    if (won) {
+      sessionStorage.removeItem("longdou-checkpoint-v1");
+      renderCheckpointButton();
+    }
     const previousBest = activeScores()[currentLevel];
     const finalScore = won ? Math.floor(score + 1000 + energy * 300) : Math.floor(score);
-    const stars = won ? calculateStars(finalScore) : 0;
+    const stars = won ? calculateStars() : 0;
     const newRecord = won && !practiceMode && finalScore > previousBest;
     resultSnapshot = {
       won, stars, coins, score: finalScore, badgeCollected, energy,
       collisions, maxComboMultiplier, previousBest, newRecord, practice: practiceMode,
-      character: characterName(), familyCalls,
+      character: characterName(), familyCalls, missionStatus: missionStatus(),
+      catsRescued, catsMissed, wavesCleared, waveHits, rocksDodged, rockHits,
+      nightTimeLeft, maxNightCollectStreak, bossHits,
     };
 
     if (won) {
       save.stars[currentLevel] = Math.max(save.stars[currentLevel], stars);
+      save.starsByCharacter[selectedCharacter][currentLevel] = Math.max(save.starsByCharacter[selectedCharacter][currentLevel], stars);
       if (!practiceMode) activeScores()[currentLevel] = Math.max(activeScores()[currentLevel], finalScore);
+      if (newRecord) save.recordRoutes[selectedCharacter][currentLevel] = (save.attempts[currentLevel] % 3) + 1;
       save.badges[currentLevel] ||= badgeCollected;
+      if (!practiceMode) save.characterBadges[selectedCharacter][currentLevel] = true;
       save.unlocked = Math.max(save.unlocked, Math.min(levelData.length, currentLevel + 2));
       if (!practiceMode) save.failures[currentLevel] = 0;
       const totalStars = save.stars.reduce((total, value) => total + value, 0);
+      save.goldenTrailUnlocked ||= totalStars >= 12;
       if (totalStars >= 18 && !save.championUnlocked) {
         save.championUnlocked = true;
+        save.endlessUnlocked = true;
         championJustUnlocked = true;
       }
+      save.familyPortraitUnlocked ||= Object.values(save.characterBadges).every((levels) => levels.every(Boolean));
       audio.play("win");
+      const cheers = CHARACTER_CONFIG[selectedCharacter].cheers;
+      setTimeout(() => audio.speak(cheers[Math.floor(Math.random() * cheers.length)]), 260);
       if (newRecord) audio.play("record");
       if (championJustUnlocked) audio.play("champion");
       if (currentLevel === levelData.length - 1) {
@@ -1104,20 +1450,47 @@
     const resultCharacter = document.querySelector("#resultCharacter");
     const level = levelData[currentLevel];
 
-    resultCharacter.src = selectedCharacter === "doudou"
-      ? result.won ? "assets/doudou-victory-full.png" : "assets/doudou-run-1.png"
-      : "assets/longdou.webp";
+    if (result.endless) {
+      resultCharacter.src = CHARACTER_CONFIG[selectedCharacter].victory;
+      resultCharacter.alt = `${result.character}完成无尽挑战`;
+      kicker.textContent = "无尽挑战结束";
+      title.textContent = `${result.character}坚持了 ${Math.floor(result.elapsed)} 秒！`;
+      stars.textContent = "🏁 ⚡ 🏁";
+      summary.textContent = `金币 ${result.coins} · 家人技能 ${result.familyCalls} 次 · 碰撞 ${result.collisions} 次 · 得分 ${result.score}`;
+      const milestones = [
+        [document.querySelector("#finishGoal"), result.elapsed >= 60, "坚持60秒"],
+        [document.querySelector("#badgeGoal"), result.score >= 10000, "达到10000分"],
+        [document.querySelector("#scoreGoal"), result.maxComboMultiplier >= 3, "达成×3连击"],
+      ];
+      milestones.forEach(([element, complete, label]) => {
+        element.classList.toggle("is-complete", complete);
+        element.textContent = `${complete ? "★" : "☆"} ${label}`;
+      });
+      record.textContent = result.newRecord ? `🎉 无尽模式新纪录 ${result.score}` : `无尽模式纪录 ${save.endlessBest}`;
+      advice.textContent = "无尽模式会越来越快，换一位角色还能挑战不同手感。";
+      champion.hidden = true;
+      practice.hidden = true;
+      next.hidden = true;
+      showScreen("result");
+      return;
+    }
+
+    resultCharacter.src = result.won
+      ? CHARACTER_CONFIG[selectedCharacter].victory
+      : selectedCharacter === "xiaoze" ? "assets/xiaoze-hurt.png"
+        : selectedCharacter === "xiaojia" ? "assets/xiaojia-hurt.png"
+          : selectedCharacter === "doudou" ? "assets/doudou-run-1.png" : "assets/longdou.webp";
     resultCharacter.alt = `${result.character}庆祝`;
 
     kicker.textContent = result.practice ? "练习模式成绩" : result.won ? `第 ${currentLevel + 1} 关完成` : "小丑追上来了";
     title.textContent = result.won ? `${result.character}通过${levelData[currentLevel].name}！` : `水果网救下了${result.character}`;
     stars.textContent = result.won ? `${"★ ".repeat(result.stars)}${"☆ ".repeat(3 - result.stars)}`.trim() : "☆ ☆ ☆";
-    summary.textContent = `金币 ${result.coins} · 合击 ${result.familyCalls} 次 · 碰撞 ${result.collisions} 次 · 最高连击 ×${result.maxComboMultiplier} · 得分 ${result.score}`;
+    summary.textContent = `金币 ${result.coins} · ${supportSkillName()} ${result.familyCalls} 次 · 碰撞 ${result.collisions} 次 · 最高连击 ×${result.maxComboMultiplier} · 得分 ${result.score}`;
 
     const goalStates = [
-      [document.querySelector("#finishGoal"), result.won, "成功到达终点"],
-      [document.querySelector("#badgeGoal"), result.badgeCollected, "找回城市徽章"],
-      [document.querySelector("#scoreGoal"), !result.practice && result.score >= level.targetScore, `达到三星目标 ${level.targetScore} 分`],
+      [document.querySelector("#finishGoal"), result.won, level.goals[0]],
+      [document.querySelector("#badgeGoal"), result.missionStatus[0], level.goals[1]],
+      [document.querySelector("#scoreGoal"), !result.practice && result.missionStatus[1], level.goals[2]],
     ];
     goalStates.forEach(([element, complete, label]) => {
       element.classList.toggle("is-complete", complete);
@@ -1127,8 +1500,8 @@
     record.textContent = result.practice
       ? "练习模式不记录最高分"
       : result.newRecord
-        ? `🎉 新纪录！原纪录 ${result.previousBest || 0} → ${result.score}`
-        : `个人纪录 ${Math.max(result.previousBest, result.score) || "—"}`;
+        ? `🎉 新纪录！原纪录 ${result.previousBest || 0} → ${result.score} · 路线${save.recordRoutes[selectedCharacter][currentLevel]}`
+        : `个人纪录 ${Math.max(result.previousBest, result.score) || "—"}${save.recordRoutes[selectedCharacter][currentLevel] ? ` · 路线${save.recordRoutes[selectedCharacter][currentLevel]}` : ""}`;
 
     if (!result.won) {
       advice.textContent = save.failures[currentLevel] >= 3
@@ -1136,13 +1509,10 @@
         : "下一局先减少一次碰撞，保住能量就能跑得更远。";
     } else if (result.practice) {
       advice.textContent = "练习完成！回到正式模式才能获得第三星和刷新纪录。";
-    } else if (!result.badgeCollected) {
-      advice.textContent = "下一局优先拿到城市徽章，就能获得第二星。";
-    } else if (result.score < level.targetScore) {
-      const difference = level.targetScore - result.score;
-      advice.textContent = result.collisions > 0
-        ? `还差 ${difference} 分获得第三星——少撞一次障碍就很接近了！`
-        : `还差 ${difference} 分获得第三星——保持连击，多收金币！`;
+    } else if (!result.missionStatus[0]) {
+      advice.textContent = `下一局完成“${level.goals[1]}”，就能获得第二星。`;
+    } else if (!result.missionStatus[1]) {
+      advice.textContent = `第三星挑战：${level.goals[2]}。`;
     } else if (result.newRecord) {
       advice.textContent = "三星＋新纪录！下一局挑战更长的 ×3 连击。";
     } else {
@@ -1163,7 +1533,8 @@
   }
 
   function clownDrawX() {
-    return Math.max(12, hero.x - 150 + (92 - chaseDistance) * 1.55);
+    const bossSlide = currentLevel === 5 && bossHits > 0 ? Math.sin(elapsed * (bossHits >= 2 ? 4.2 : 2.8)) * (bossHits >= 2 ? 62 : 34) : 0;
+    return Math.max(12, hero.x - 150 + (92 - chaseDistance) * 1.55 + bossSlide);
   }
 
   function drawBackground(level) {
@@ -1202,21 +1573,24 @@
     if (flash) return;
     const airborne = hero.y < groundY - hero.h - 1;
     const isDoudou = selectedCharacter === "doudou";
-    const runImages = selectedCharacter === "doudou" ? doudouRunImages : longlongRunImages;
-    const jumpImage = selectedCharacter === "doudou" ? doudouJumpImage : longlongJumpImage;
-    const strideDistance = isDoudou ? 315 : 260;
+    const isLonglong = selectedCharacter === "longlong";
+    const selectedImages = characterImages[selectedCharacter];
+    const runImages = selectedImages.run;
+    const jumpImage = selectedImages.jump;
+    const strideDistance = isDoudou ? 315 : selectedCharacter === "xiaoze" ? 235 : selectedCharacter === "xiaojia" ? 250 : 260;
     const runCycle = locomotionDistance / strideDistance;
     const runPosition = runCycle * runImages.length;
     const runPhase = runCycle * Math.PI * 2;
     const runFrame = Math.floor(runPosition) % runImages.length;
     const jumpReady = jumpImage.complete && jumpImage.naturalWidth;
     const selectedRunFrame = runImages[runFrame].complete && runImages[runFrame].naturalWidth ? runFrame : 0;
-    const image = airborne && jumpReady ? jumpImage : runImages[selectedRunFrame];
+    const hurtReady = hero.invulnerable > 1.35 && selectedImages.hurt?.complete && selectedImages.hurt.naturalWidth;
+    const image = hurtReady ? selectedImages.hurt : airborne && jumpReady ? jumpImage : runImages[selectedRunFrame];
     const crop = airborne && jumpReady
-      ? isDoudou ? DOUDOU_CROP : HERO_JUMP_CROP
+      ? isLonglong ? HERO_JUMP_CROP : FULL_FRAME_CROP
       : FULL_FRAME_CROP;
-    const drawH = isDoudou ? 168 : airborne ? hero.h : 150;
-    const drawW = airborne && jumpReady && !isDoudou ? 127 : drawH;
+    const drawH = isDoudou ? 168 : selectedCharacter === "xiaoze" ? 146 : selectedCharacter === "xiaojia" ? 158 : airborne ? hero.h : 150;
+    const drawW = airborne && jumpReady && isLonglong ? 127 : drawH;
     const centerX = hero.x + hero.w / 2;
     const runBounce = airborne || prefersReducedMotion ? 0 : -Math.abs(Math.sin(runPhase * 2)) * (isDoudou ? 1.8 : 2.8);
     const groundInset = airborne ? 0 : isDoudou ? 11 : 12;
@@ -1229,14 +1603,12 @@
       ? prefersReducedMotion ? 0 : Math.max(-.12, Math.min(.09, hero.vy / 5600))
       : prefersReducedMotion ? 0 : (isDoudou ? -.035 : -.018) - (boostTime > 0 ? .025 : 0) + Math.sin(runPhase) * .012;
 
-    if (save.championUnlocked) {
+    if (save.goldenTrailUnlocked) {
       ctx.save();
+      ctx.font = "18px system-ui";
       for (let i = 1; i <= 6; i += 1) {
         ctx.globalAlpha = .34 / i;
-        ctx.fillStyle = i % 2 ? "#ffd84a" : "#fff3a0";
-        ctx.beginPath();
-        ctx.arc(centerX - 18 - i * 18, drawY + drawH * .72 + Math.sin(elapsed * 12 + i) * 7, 12 - i, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillText(i % 2 ? "🥭" : "🍍", centerX - 24 - i * 22, drawY + drawH * .72 + Math.sin(elapsed * 12 + i) * 7);
       }
       ctx.restore();
     }
@@ -1270,7 +1642,7 @@
       -drawW / 2, -drawH, drawW, drawH);
     if (save.championUnlocked && !airborne) {
       ctx.shadowBlur = 0;
-      ctx.fillStyle = "#ffd43b";
+      ctx.fillStyle = save.familyPortraitUnlocked ? `hsl(${(elapsed * 160) % 360} 90% 58%)` : "#ffd43b";
       ctx.strokeStyle = "#8d5d00";
       ctx.lineWidth = 2;
       for (const wheelX of [-drawW * .28, drawW * .28]) {
@@ -1296,8 +1668,11 @@
     const y = groundY - 214;
     const size = 220;
     const throwing = phase > .52 && phase < 2.4;
-    const leftImage = familyImages[throwing ? "xiaojia-throw" : "xiaojia-enter"];
-    const rightImage = familyImages[throwing ? "xiaoze-throw" : "xiaoze-enter"];
+    const siblingSupport = usesSiblingSupport();
+    const leftKey = siblingSupport ? "xiaojia" : "longlong";
+    const rightKey = siblingSupport ? "xiaoze" : "doudou";
+    const leftImage = familyImages[`${leftKey}-${throwing ? "throw" : "enter"}`];
+    const rightImage = familyImages[`${rightKey}-${throwing ? "throw" : "enter"}`];
 
     ctx.save();
     if (save.championUnlocked) {
@@ -1345,7 +1720,9 @@
     const skateFrame = Math.floor(skatePosition) % clownSkateImages.length;
     const skatePhase = skatePosition / clownSkateImages.length * Math.PI * 2;
     const push = Math.sin(skatePhase);
-    const y = groundY - h;
+    const bossLift = currentLevel === 5 && bossHits >= 2 ? Math.abs(Math.sin(elapsed * 3.1)) * 54 : 0;
+    const clownGround = groundY - bossLift;
+    const y = clownGround - h;
     ctx.save();
     if (clownStun > 0) {
       const slipW = 158;
@@ -1377,7 +1754,7 @@
       const drawX = -crop.anchorX * scale;
       const centerX = x + 63;
       const glideBob = -Math.abs(Math.sin(skatePhase * 2)) * 1.8;
-      ctx.translate(centerX + push * 1.2, groundY + glideBob);
+      ctx.translate(centerX + push * 1.2, clownGround + glideBob);
       ctx.rotate(push * .014);
       ctx.drawImage(image, crop.x, crop.y, crop.w, crop.h, drawX, -h, drawW, h);
       ctx.strokeStyle = "rgba(255,255,255,.72)";
@@ -1406,6 +1783,10 @@
     ctx.save();
     if (item.type === "coin") {
       ctx.translate(x + w / 2, y + h / 2);
+      if (currentLevel === 4) {
+        ctx.shadowColor = Math.floor(item.spin * 2) % 2 ? "#ff59d6" : "#55f4ff";
+        ctx.shadowBlur = 18;
+      }
       const turn = .18 + Math.abs(Math.sin(item.spin)) * .82;
       const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, w * .82);
       glow.addColorStop(0, "rgba(255,242,141,.42)");
@@ -1452,18 +1833,23 @@
       ctx.fillStyle = kind === "puddle" ? "#2f87bd" : "#3c3a38";
       ctx.beginPath(); ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       if (kind === "crack") { ctx.strokeStyle = "#d9b77a"; ctx.beginPath(); ctx.moveTo(x + 20, y + 8); ctx.lineTo(x + 53, y + 2); ctx.lineTo(x + 78, y + 15); ctx.lineTo(x + 104, y + 5); ctx.stroke(); }
-    } else if (kind === "ball" || kind === "coconut" || kind === "rock") {
-      ctx.fillStyle = kind === "ball" ? "#ff6f59" : kind === "coconut" ? "#855129" : "#50565a";
+    } else if (["ball", "coconut", "rock", "fallingRock", "bossBall"].includes(kind)) {
+      ctx.fillStyle = ["ball", "bossBall"].includes(kind) ? "#ff6f59" : kind === "coconut" ? "#855129" : "#50565a";
       ctx.beginPath(); ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, -.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      if (kind === "ball") { ctx.strokeStyle = "#fff2c4"; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, w / 3, -.7, 1.9); ctx.stroke(); }
+      if (["ball", "bossBall"].includes(kind)) { ctx.strokeStyle = "#fff2c4"; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, w / 3, -.7, 1.9); ctx.stroke(); }
       if (kind === "coconut") { ctx.fillStyle = "#d9a768"; [0,1,2].forEach(i => { ctx.beginPath(); ctx.arc(x + 19 + i * 7, y + 16, 2.5, 0, Math.PI * 2); ctx.fill(); }); }
+      if (kind === "fallingRock" && item.warning > 0) {
+        ctx.fillStyle = "#ffdc43"; ctx.strokeStyle = "#7c301f"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x + w / 2, groundY - 118); ctx.lineTo(x + w / 2 - 22, groundY - 78); ctx.lineTo(x + w / 2 + 22, groundY - 78); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#7c301f"; ctx.font = "bold 24px system-ui"; ctx.fillText("!", x + w / 2 - 5, groundY - 87);
+      }
     } else if (kind === "barrier" || kind === "bench") {
       const color = kind === "barrier" ? "#ff7648" : "#8a5a35";
       roundedRect(x, y + 12, w, h - 30, 6, color);
       ctx.fillStyle = "#fff2d0";
       if (kind === "barrier") for (let i = 12; i < w; i += 34) ctx.fillRect(x + i, y + 18, 13, h - 43);
       ctx.fillStyle = "#263a3e"; ctx.fillRect(x + 10, y + h - 18, 9, 18); ctx.fillRect(x + w - 19, y + h - 18, 9, 18);
-    } else if (kind === "cat") {
+    } else if (kind === "cat" || kind === "rescueCat") {
       const stride = Math.sin(elapsed * 15 + x * .02);
       const catW = w + 12;
       const catH = h + 8;
@@ -1472,6 +1858,20 @@
       ctx.scale(-(1 + Math.abs(stride) * .035), 1 - Math.abs(stride) * .025);
       ctx.drawImage(catImage, CAT_CROP.x, CAT_CROP.y, CAT_CROP.w, CAT_CROP.h, -catW / 2, -catH / 2, catW, catH);
       ctx.restore();
+      if (kind === "rescueCat") {
+        ctx.font = "bold 18px system-ui"; ctx.fillStyle = "#fff"; ctx.strokeStyle = "#112e35"; ctx.lineWidth = 4;
+        ctx.strokeText("救我！", x + 10, y - 8); ctx.fillText("救我！", x + 10, y - 8);
+      }
+    } else if (kind === "wave") {
+      const wave = Math.sin(elapsed * 8 + x * .02) * 7;
+      ctx.fillStyle = "rgba(58,184,224,.9)"; ctx.strokeStyle = "#0b6f9a"; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y + 24);
+      ctx.quadraticCurveTo(x + w * .3, y - 8 + wave, x + w * .52, y + 22);
+      ctx.quadraticCurveTo(x + w * .76, y + 2 - wave, x + w, y + 18);
+      ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "#eaffff"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(x + 8, y + 23); ctx.quadraticCurveTo(x + w * .3, y - 3 + wave, x + w * .52, y + 23); ctx.stroke();
+    } else if (kind === "bossBanana") {
+      ctx.font = "54px system-ui"; ctx.fillText("🍌", x, y + h + 12);
     } else if (kind === "seagull") {
       ctx.strokeStyle = "#f8fbf4"; ctx.lineWidth = 10; ctx.lineCap = "round";
       ctx.beginPath(); ctx.arc(x + 22, y + 28, 25, 3.7, 5.8); ctx.arc(x + 65, y + 28, 25, 3.7, 5.8); ctx.stroke();
@@ -1513,27 +1913,38 @@
 
   function updateHud() {
     const level = levelData[currentLevel];
-    const progress = mode === "menu" ? 0 : Math.min(100, elapsed / level.duration * 100);
+    const progress = mode === "menu" ? 0 : endlessMode ? (elapsed % 60) / 60 * 100 : Math.min(100, elapsed / level.duration * 100);
     ui.energy.textContent = "🥥".repeat(Math.max(0, energy)) + "○".repeat(Math.max(0, 3 - energy));
     ui.coins.textContent = String(coins);
     ui.fruit.textContent = `${fruit} / 3`;
     ui.score.textContent = String(Math.floor(score));
-    ui.target.textContent = String(level.targetScore);
-    ui.best.textContent = String(activeScores()[currentLevel] || "—");
+    ui.target.textContent = "3星";
+    ui.best.textContent = String(endlessMode ? save.endlessBest || "—" : activeScores()[currentLevel] || "—");
     ui.combo.textContent = `连击 ×${comboMultiplier}`;
     ui.combo.classList.toggle("is-hot", comboMultiplier > 1);
     ui.practiceBadge.hidden = !practiceMode;
     ui.chaseFill.style.width = `${chaseDistance}%`;
     ui.chaseState.textContent = chaseDistance < 32 ? "危险" : chaseDistance < 58 ? "靠近" : "安全";
-    ui.progressText.textContent = `第 ${currentLevel + 1} 关 · ${Math.floor(progress)}%`;
+    ui.progressText.textContent = endlessMode ? `无尽 · ${Math.floor(elapsed)}秒` : `第 ${currentLevel + 1} 关 · ${Math.floor(progress)}%`;
     ui.progressFill.style.width = `${progress}%`;
     ui.boostFill.style.width = `${boostTime > 0 ? 100 : boost}%`;
     ui.boostState.textContent = boostTime > 0 ? `${boostTime.toFixed(1)}秒` : boost >= 100 ? "就绪" : `${Math.floor(boost)}%`;
     ui.familyFill.style.width = `${familyPower}%`;
-    ui.familyState.textContent = familyAssistTime > 0 ? "呈祥中" : familyPower >= 100 ? "就绪" : `${Math.floor(familyPower)}%`;
+    ui.familyState.textContent = familyAssistTime > 0 ? (usesSiblingSupport() ? "呈祥中" : "同心中") : familyPower >= 100 ? "就绪" : `${Math.floor(familyPower)}%`;
+    ui.familyButtonLabel.textContent = supportSkillName();
     ui.familyButton.hidden = familyPower < 100 || familyAssistTime > 0;
     ui.throwButton.disabled = fruit <= 0;
     ui.boostButton.disabled = boost < 100 && boostTime <= 0;
+    const missionText = endlessMode
+      ? `无尽挑战 ${Math.floor(elapsed)}秒 · 速度 ${Math.round(100 + Math.min(42, elapsed / 4.2))}%`
+      : currentLevel === 0
+      ? `任务：找回徽章${selectedCharacter === "doudou" && strengthGuard ? " · 🛡️力量护盾" : ""}`
+      : currentLevel === 1 ? `救猫 ${catsRescued}/3 · 掉队 ${catsMissed}`
+        : currentLevel === 2 ? `踏浪 ${wavesCleared}/5 · 被浪打中 ${waveHits}`
+          : currentLevel === 3 ? `躲落石 ${rocksDodged}/5 · 命中 ${rockHits}`
+            : currentLevel === 4 ? `夜赛剩余 ${nightTimeLeft.toFixed(1)}秒 · 连续收集 ${maxNightCollectStreak}/10`
+              : bossFinaleReady ? `按 G 发动${supportSkillName()}完成决战` : `命中小丑 ${bossHits}/3`;
+    ui.mission.textContent = missionText;
   }
 
   function loop(now) {
@@ -1566,8 +1977,21 @@
     if (!audioReady) showToast("点一下右上角的声音按钮开启音乐", 2400);
   });
   document.querySelector("#levelSelectButton").addEventListener("click", () => { renderLevelGrid(); showScreen("levels"); });
+  document.querySelector("#checkpointButton").addEventListener("click", () => {
+    const checkpoint = readCheckpoint();
+    if (!checkpoint) return renderCheckpointButton();
+    selectedCharacter = CHARACTER_KEYS.includes(checkpoint.character) ? checkpoint.character : "longlong";
+    save.lastCharacter = selectedCharacter;
+    persist();
+    startLevel(checkpoint.level, { checkpoint: true, retry: true });
+  });
   document.querySelector("#chooseLonglongButton").addEventListener("click", () => chooseCharacter("longlong"));
   document.querySelector("#chooseDoudouButton").addEventListener("click", () => chooseCharacter("doudou"));
+  document.querySelector("#chooseXiaozeButton").addEventListener("click", () => chooseCharacter("xiaoze"));
+  document.querySelector("#chooseXiaojiaButton").addEventListener("click", () => chooseCharacter("xiaojia"));
+  document.querySelector("#endlessButton").addEventListener("click", () => {
+    openCharacterSelect(() => startLevel(4, { endless: true }));
+  });
   document.querySelector("#characterBackButton").addEventListener("click", goMenu);
   document.querySelector("#backToMenuButton").addEventListener("click", goMenu);
   document.querySelector("#clearProgressButton").addEventListener("click", () => {
@@ -1578,13 +2002,24 @@
     renderLevelGrid();
     showToast("进度已清除");
   });
+  document.querySelector("#restoreProgressButton").addEventListener("click", () => {
+    const backup = localStorage.getItem(`${STORAGE_KEY}-backup-v3`);
+    if (!backup || !window.confirm("恢复改版前的关卡进度吗？当前新版进度会被替换。")) return;
+    localStorage.setItem(STORAGE_KEY, backup);
+    save = loadSave();
+    selectedCharacter = save.lastCharacter;
+    persist();
+    renderLevelGrid();
+    renderCharacterSelect();
+    showToast("已恢复并迁移旧进度", 1600);
+  });
   document.querySelector("#storyContinueButton").addEventListener("click", () => { const action = storyAction; storyAction = null; if (action) action(); });
   document.querySelector("#skipStoryButton").addEventListener("click", () => { const action = storyAction; storyAction = null; if (action) action(); });
-  document.querySelector("#retryButton").addEventListener("click", () => startLevel(currentLevel, { practice: practiceMode }));
+  document.querySelector("#retryButton").addEventListener("click", () => startLevel(currentLevel, { practice: practiceMode, retry: true }));
   document.querySelector("#practiceButton").addEventListener("click", () => startLevel(currentLevel, { practice: true }));
   document.querySelector("#nextButton").addEventListener("click", nextLevel);
   document.querySelector("#changeCharacterButton").addEventListener("click", () => {
-    openCharacterSelect(() => startLevel(currentLevel, { practice: practiceMode }));
+    openCharacterSelect(() => startLevel(currentLevel, { practice: practiceMode, retry: true }));
   });
   document.querySelector("#resultMenuButton").addEventListener("click", goMenu);
   document.querySelector("#resumeButton").addEventListener("click", () => togglePause(false));
@@ -1615,6 +2050,7 @@
 
   renderLevelGrid();
   renderCharacterSelect();
+  renderCheckpointButton();
   updateHud();
 
   const waitForImage = (image) => new Promise((resolve) => {
@@ -1623,7 +2059,7 @@
   });
 
   Promise.all([
-    backgroundImages[0], longlongRunImages[0], doudouRunImages[0], doudouVictoryImage, clownSkateImages[0],
+    backgroundImages[0], longlongRunImages[0], doudouRunImages[0], xiaozeRunImages[0], xiaojiaRunImages[0], doudouVictoryImage, clownSkateImages[0],
   ].map(waitForImage)).then(() => {
     adventureButton.disabled = false;
     adventureButton.textContent = "开始冒险";
