@@ -1588,7 +1588,7 @@
     const image = hurtReady ? selectedImages.hurt : airborne && jumpReady ? jumpImage : runImages[selectedRunFrame];
     const imageWidth = image.naturalWidth || image.width;
     const imageHeight = image.naturalHeight || image.height;
-    const edgeInset = selectedCharacter === "xiaojia" ? 4 : 0;
+    const edgeInset = selectedCharacter === "xiaojia" ? 12 : 0;
     const completeImageCrop = {
       x: edgeInset,
       y: edgeInset,
@@ -1671,10 +1671,11 @@
     const siblingSupport = usesSiblingSupport();
     const leftBase = -190 + ease(enter) * 355;
     const rightBase = canvas.width + 10 - ease(enter) * 420;
-    const alignedX = canvas.width + 180 - ease(enter) * (canvas.width - hero.x + 20) + finale * (canvas.width - hero.x + 220);
+    const size = siblingSupport ? 220 : 190;
+    const behindClownX = Math.max(-size * .42, clownDrawX() - size - 24);
+    const alignedX = -size - 80 + ease(enter) * (behindClownX + size + 80) - finale * (size + 100);
     const leftX = siblingSupport ? leftBase + finale * 255 : alignedX;
     const rightX = siblingSupport ? rightBase - finale * 230 : alignedX;
-    const size = siblingSupport ? 220 : 190;
     const leftY = siblingSupport ? groundY - 214 : groundY - 274;
     const rightY = siblingSupport ? groundY - 214 : groundY - 174;
     const throwing = phase > .52 && phase < 2.4;
