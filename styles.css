@@ -142,6 +142,13 @@ button:focus-visible { outline: 4px solid white; outline-offset: 3px; }
 .menu-copy h2 { margin: 4px 0 8px; font-size: clamp(50px, 7vw, 104px); line-height: .9; letter-spacing: -.06em; text-shadow: 6px 6px 0 #0b2d33; }
 .menu-copy p:not(.eyebrow) { margin: 14px auto 22px; font-size: clamp(15px, 1.5vw, 22px); font-weight: 800; }
 .menu-tip { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); color: white; font-size: 12px; font-weight: 800; opacity: .8; }
+.daily-card { width: min(440px, 96%); margin: 12px auto 0; padding: 9px 12px; border: 2px solid rgba(255,255,255,.72); border-radius: 15px; background: rgba(4,38,44,.72); text-align: left; }
+.daily-heading { display: flex; justify-content: space-between; gap: 10px; color: #fff2a8; font-size: 12px; }
+.daily-tasks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 7px; }
+.daily-task { padding: 5px 6px; border-radius: 9px; background: rgba(255,255,255,.12); color: white; font-size: 10px; font-weight: 800; line-height: 1.25; }
+.daily-task.is-complete { background: #2a9f70; color: white; }
+.daily-settings { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+.daily-settings button { padding: 3px 7px; border: 1px solid rgba(255,255,255,.65); border-radius: 99px; background: transparent; color: white; font: 800 9px system-ui; cursor: pointer; }
 .eyebrow { margin: 0; font-size: 12px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; }
 
 .primary-button, .secondary-button {
@@ -314,7 +321,7 @@ kbd { display: inline-block; min-width: 28px; padding: 3px 6px; border: 2px soli
 }
 
 @media (orientation: portrait) and (max-width: 620px) {
-  .rotate-notice { display: grid; }
+  body.is-playing .rotate-notice { display: grid; }
 }
 
 @media (orientation: landscape) and (max-height: 520px) {

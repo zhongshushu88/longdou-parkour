@@ -137,6 +137,54 @@
   };
   const CHARACTER_KEYS = Object.keys(CHARACTER_CONFIG);
 
+  const RANDOM_EVENT_CONFIG = {
+    coconutRain: { icon: "🥥", name: "椰子雨", voice: "前面有椰子雨！", unlock: 0 },
+    catRescue: { icon: "🐈", name: "小猫求救", voice: "发现小猫！", unlock: 1 },
+    coinTrain: { icon: "🪙", name: "金币列车", voice: "金币列车来了！", unlock: 1 },
+    clownRush: { icon: "🤡", name: "小丑突袭", voice: "小丑冲过来啦！", unlock: 2 },
+    treasure: { icon: "🎁", name: "神秘宝箱", voice: "前面有神秘宝箱！", unlock: 2 },
+  };
+  const POWERUP_CONFIG = {
+    magnet: { icon: "🧲", name: "金币磁铁", duration: 8 },
+    shield: { icon: "🛡️", name: "椰壳护盾", duration: 0 },
+    giantFruit: { icon: "🍉", name: "巨大水果", duration: 8 },
+    freeze: { icon: "🥤", name: "冰爽椰汁", duration: 6 },
+  };
+  const SHORTCUT_LABELS = {
+    longlong: "龙龙连投捷径", doudou: "豆豆力量捷径", xiaoze: "小泽高空捷径", xiaojia: "小嘉花路捷径",
+  };
+  const DAILY_CHALLENGE_POOL = [
+    { id: "coins", icon: "🪙", label: "收集80枚金币", target: 80 },
+    { id: "risky", icon: "↗", label: "走1次危险路线", target: 1 },
+    { id: "family", icon: "👫", label: "发动1次家人技能", target: 1 },
+    { id: "events", icon: "🎲", label: "经历3个随机事件", target: 3 },
+    { id: "treasure", icon: "🎁", label: "打开1个神秘宝箱", target: 1 },
+    { id: "shortcuts", icon: "✨", label: "发现1条角色捷径", target: 1 },
+  ];
+  const MINI_GAME_SCHEDULE = {
+    2: [
+      { time: 22, gameType: "reverseChase" },
+      { time: 51, gameType: "airCoins" },
+    ],
+    3: [{ time: 34, gameType: "rhythm" }],
+    4: [
+      { time: 20, gameType: "reverseChase" },
+      { time: 54, gameType: "hitCombo" },
+    ],
+    5: [
+      { time: 24, gameType: "reverseChase" },
+      { time: 73, gameType: "hitCombo" },
+    ],
+  };
+
+  function seededRandom(seed) {
+    let state = seed >>> 0 || 1;
+    return () => {
+      state = (state * 1664525 + 1013904223) >>> 0;
+      return state / 4294967296;
+    };
+  }
+
   const COURSE_PATTERNS = [
     ["crate", "cone", "cat", "crate", "cone", "crate", "cat", "cone", "crate", "cat", "cone", "crate", "cat", "crate", "cone"],
     ["bench", "rescueCat", "cone", "rescueCat", "puddle", "bench", "rescueCat", "cone", "puddle", "bench", "cone", "puddle", "cone", "bench", "puddle", "cone"],
@@ -151,12 +199,45 @@
     const pattern = COURSE_PATTERNS[levelIndex];
     const interval = (level.duration - 8) / pattern.length;
     const variation = [0, .14, -.12][attempt % 3];
-    return pattern.map((kind, index) => ({
+    const seed = (levelIndex + 1) * 100003 + Math.max(1, attempt) * 7919;
+    const random = seededRandom(seed);
+    const availableEvents = Object.keys(RANDOM_EVENT_CONFIG).filter((key) => RANDOM_EVENT_CONFIG[key].unlock <= levelIndex);
+    const eventCount = levelIndex === 0 ? 1 : levelIndex === 5 ? 3 : 2;
+    const eventSlots = [3, Math.floor(pattern.length * .55), pattern.length - 3].slice(0, eventCount);
+    const branchSlots = levelIndex === 0 ? [7] : [4, Math.max(8, pattern.length - 5)];
+    let previousEvent = "";
+    const base = pattern.map((kind, index) => ({
       time: 2.2 + index * interval + (index % 2 === 0 ? variation : -variation),
       kind,
       coinCount: index % 5 === 4 ? 3 : 4,
       fruit: [2, 7, 12].includes(index),
+      seed: seed + index,
     }));
+    eventSlots.forEach((slot, index) => {
+      let eventType = availableEvents[Math.floor(random() * availableEvents.length)];
+      if (eventType === previousEvent && availableEvents.length > 1) {
+        eventType = availableEvents[(availableEvents.indexOf(eventType) + 1) % availableEvents.length];
+      }
+      previousEvent = eventType;
+      base.push({ time: 3 + slot * interval, kind: "randomEvent", eventType, seed: seed + 500 + index });
+    });
+    branchSlots.forEach((slot, index) => {
+      base.push({
+        time: 3.5 + slot * interval,
+        kind: "branchGate",
+        shortcutChar: CHARACTER_KEYS[Math.floor(random() * CHARACTER_KEYS.length)],
+        seed: seed + 900 + index,
+      });
+    });
+    (MINI_GAME_SCHEDULE[levelIndex] || []).forEach((mini, index) => {
+      base.push({
+        time: mini.time + (attempt % 2 ? index * 1.1 : 0),
+        kind: "miniGame",
+        gameType: mini.gameType,
+        seed: seed + 1200 + index,
+      });
+    });
+    return base.sort((a, b) => a.time - b.time);
   }
 
   const longlongRunImages = [1, 2, 3, 4, 5, 6].map((frame) => {
@@ -274,8 +355,9 @@
     vy: 0, jumps: 0, invulnerable: 0, airTime: 0, landingTime: 0,
   };
 
+  const emptyCharacterScores = () => Object.fromEntries(CHARACTER_KEYS.map((key) => [key, [0, 0, 0, 0, 0, 0]]));
   const defaultSave = () => ({
-    scoreVersion: 4,
+    scoreVersion: 5,
     unlocked: 1,
     stars: [0, 0, 0, 0, 0, 0],
     scores: [0, 0, 0, 0, 0, 0],
@@ -285,6 +367,7 @@
       xiaoze: [0, 0, 0, 0, 0, 0],
       xiaojia: [0, 0, 0, 0, 0, 0],
     },
+    classicScoresByCharacter: emptyCharacterScores(),
     starsByCharacter: {
       longlong: [0, 0, 0, 0, 0, 0],
       doudou: [0, 0, 0, 0, 0, 0],
@@ -315,9 +398,16 @@
     introSeen: false,
     tutorialDone: false,
     familyTutorialDone: false,
+    richTutorialDone: false,
+    fruitMedals: 0,
+    dailyDate: "",
+    dailyProgress: {},
+    dailyClaimed: [],
+    settings: { voiceHints: true, vibration: true },
   });
 
   let save = loadSave();
+  ensureDaily();
   let selectedCharacter = save.lastCharacter || "longlong";
   persist();
   let characterSelectAction = null;
@@ -371,6 +461,9 @@
   let bossHits = 0;
   let bossFinaleReady = false;
   let bossFinaleTriggered = false;
+  let bossPhase = 1;
+  let bossShieldFruits = 0;
+  let bossShieldSpawned = false;
   let endlessMode = false;
   let checkpointMode = false;
   let checkpointSaved = false;
@@ -379,6 +472,30 @@
   let bellTimer = 0;
   let musicTimer = 0;
   let musicStep = 0;
+  let runSeed = 0;
+  let routeChoice = "安全路线";
+  let routeChoices = 0;
+  let riskyRoutes = 0;
+  let shortcutsFound = 0;
+  let randomEventsCompleted = 0;
+  let activeEvent = "";
+  let eventBannerTime = 0;
+  let magnetTime = 0;
+  let giantFruitTime = 0;
+  let freezeTime = 0;
+  let shieldCharges = 0;
+  let assistMode = false;
+  let chaseModeTime = 0;
+  let reverseChaseTime = 0;
+  let reverseChaseHits = 0;
+  let miniGameType = "";
+  let miniGameTime = 0;
+  let miniGameTarget = 0;
+  let miniGameProgress = 0;
+  let miniGameResolved = false;
+  let treasureCollected = 0;
+  let nextEndlessSupply = 60;
+  let throwCooldown = 0;
 
   class TinyAudio {
     constructor() {
@@ -553,18 +670,31 @@
       if ((stored.scoreVersion || 1) < 4 && raw && !localStorage.getItem(`${STORAGE_KEY}-backup-v3`)) {
         localStorage.setItem(`${STORAGE_KEY}-backup-v3`, raw);
       }
+      if ((stored.scoreVersion || 1) < 5 && raw && !localStorage.getItem(`${STORAGE_KEY}-backup-v4`)) {
+        localStorage.setItem(`${STORAGE_KEY}-backup-v4`, raw);
+      }
       const defaults = defaultSave();
       const normalized = { ...defaults, ...stored };
       for (const key of ["stars", "scores", "badges", "failures", "attempts"]) {
         normalized[key] = defaults[key].map((fallback, index) => stored[key]?.[index] ?? fallback);
       }
       const legacyScores = stored.scoreVersion === 2 ? normalized.scores : defaults.scores;
-      normalized.scoresByCharacter = {
+      const previousCharacterScores = {
         longlong: defaults.scores.map((fallback, index) => stored.scoresByCharacter?.longlong?.[index] ?? legacyScores[index] ?? fallback),
         doudou: defaults.scores.map((fallback, index) => stored.scoresByCharacter?.doudou?.[index] ?? fallback),
         xiaoze: defaults.scores.map((fallback, index) => stored.scoresByCharacter?.xiaoze?.[index] ?? fallback),
         xiaojia: defaults.scores.map((fallback, index) => stored.scoresByCharacter?.xiaojia?.[index] ?? fallback),
       };
+      normalized.classicScoresByCharacter = Object.fromEntries(CHARACTER_KEYS.map((key) => [
+        key,
+        defaults.scores.map((fallback, index) => stored.classicScoresByCharacter?.[key]?.[index] ?? previousCharacterScores[key][index] ?? fallback),
+      ]));
+      normalized.scoresByCharacter = Object.fromEntries(CHARACTER_KEYS.map((key) => [
+        key,
+        defaults.scores.map((fallback, index) => (stored.scoreVersion || 1) >= 5
+          ? stored.scoresByCharacter?.[key]?.[index] ?? fallback
+          : fallback),
+      ]));
       normalized.starsByCharacter = Object.fromEntries(CHARACTER_KEYS.map((key) => [
         key,
         defaults.stars.map((fallback, index) => stored.starsByCharacter?.[key]?.[index]
@@ -579,7 +709,9 @@
         defaults.scores.map((fallback, index) => stored.recordRoutes?.[key]?.[index] ?? fallback),
       ]));
       normalized.lastCharacter = CHARACTER_KEYS.includes(stored.lastCharacter) ? stored.lastCharacter : "longlong";
-      normalized.scoreVersion = 4;
+      normalized.settings = { ...defaults.settings, ...(stored.settings || {}) };
+      normalized.dailyProgress = { ...defaults.dailyProgress, ...(stored.dailyProgress || {}) };
+      normalized.scoreVersion = 5;
       normalized.championUnlocked ||= normalized.stars.reduce((total, value) => total + value, 0) >= 18;
       normalized.goldenTrailUnlocked ||= normalized.stars.reduce((total, value) => total + value, 0) >= 12;
       normalized.endlessUnlocked ||= normalized.championUnlocked;
@@ -588,6 +720,74 @@
     } catch {
       return defaultSave();
     }
+  }
+
+  function todayKey() {
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 10);
+  }
+
+  function dailyChallenges() {
+    const key = save.dailyDate || todayKey();
+    const seed = [...key].reduce((total, char) => total * 31 + char.charCodeAt(0), 7);
+    const random = seededRandom(seed);
+    const pool = [...DAILY_CHALLENGE_POOL];
+    const tasks = [];
+    while (tasks.length < 3 && pool.length) tasks.push(pool.splice(Math.floor(random() * pool.length), 1)[0]);
+    return tasks;
+  }
+
+  function ensureDaily() {
+    const key = todayKey();
+    if (save.dailyDate !== key) {
+      save.dailyDate = key;
+      save.dailyProgress = {};
+      save.dailyClaimed = [];
+    }
+  }
+
+  function renderDaily() {
+    const list = document.querySelector("#dailyTasks");
+    const medals = document.querySelector("#fruitMedals");
+    if (!list || !medals) return;
+    ensureDaily();
+    list.innerHTML = "";
+    for (const task of dailyChallenges()) {
+      const progress = Math.min(task.target, save.dailyProgress[task.id] || 0);
+      const complete = progress >= task.target;
+      const item = document.createElement("span");
+      item.className = complete ? "daily-task is-complete" : "daily-task";
+      item.textContent = `${complete ? "✓" : task.icon} ${task.label} ${progress}/${task.target}`;
+      list.appendChild(item);
+    }
+    medals.textContent = `水果奖章 ${save.fruitMedals || 0}`;
+    const voice = document.querySelector("#voiceHintToggle");
+    const vibration = document.querySelector("#vibrationToggle");
+    if (voice) voice.textContent = `童声提示 ${save.settings.voiceHints ? "开" : "关"}`;
+    if (vibration) vibration.textContent = `手机震动 ${save.settings.vibration ? "开" : "关"}`;
+  }
+
+  function applyRunToDaily() {
+    ensureDaily();
+    const additions = {
+      coins,
+      risky: riskyRoutes,
+      family: familyCalls,
+      events: randomEventsCompleted,
+      treasure: treasureCollected,
+      shortcuts: shortcutsFound,
+    };
+    for (const task of dailyChallenges()) {
+      save.dailyProgress[task.id] = (save.dailyProgress[task.id] || 0) + (additions[task.id] || 0);
+      if (save.dailyProgress[task.id] >= task.target && !save.dailyClaimed.includes(task.id)) {
+        save.dailyClaimed.push(task.id);
+        save.fruitMedals = (save.fruitMedals || 0) + 1;
+        showToast(`🏅 完成今日挑战：${task.label}`, 2200);
+        audio.play("champion");
+      }
+    }
+    renderDaily();
   }
 
   function activeScores() {
@@ -600,6 +800,10 @@
 
   function characterTotal(key) {
     return (save.scoresByCharacter[key] || []).reduce((total, value) => total + value, 0);
+  }
+
+  function classicCharacterTotal(key) {
+    return (save.classicScoresByCharacter?.[key] || []).reduce((total, value) => total + value, 0);
   }
 
   function usesSiblingSupport() {
@@ -692,14 +896,14 @@
       grid.append(button);
     });
     document.querySelector("#endlessButton").hidden = !save.endlessUnlocked;
-    document.querySelector("#restoreProgressButton").hidden = !localStorage.getItem(`${STORAGE_KEY}-backup-v3`);
+    document.querySelector("#restoreProgressButton").hidden = !localStorage.getItem(`${STORAGE_KEY}-backup-v4`) && !localStorage.getItem(`${STORAGE_KEY}-backup-v3`);
   }
 
   function renderCharacterSelect() {
     for (const key of CHARACTER_KEYS) {
       const badges = save.characterBadges[key].filter(Boolean).length;
       const personalStars = save.starsByCharacter[key].reduce((total, value) => total + value, 0);
-      document.querySelector(`#${key}Record`).textContent = `纪录 ${characterTotal(key)} 分 · 星 ${personalStars}/18 · 徽章 ${badges}/6`;
+      document.querySelector(`#${key}Record`).textContent = `丰富版 ${characterTotal(key)} · 经典 ${classicCharacterTotal(key)} · 星 ${personalStars}/18 · 徽章 ${badges}/6`;
       const buttonId = `choose${key[0].toUpperCase()}${key.slice(1)}Button`;
       document.querySelector(`#${buttonId}`).classList.toggle("is-selected", selectedCharacter === key);
     }
@@ -785,6 +989,7 @@
     locomotionDistance = 0;
     courseEventIndex = 0;
     courseEvents = buildCourse(currentLevel, save.attempts[currentLevel]);
+    runSeed = (currentLevel + 1) * 100003 + Math.max(1, save.attempts[currentLevel]) * 7919;
     entities = [];
     projectiles = [];
     particles = [];
@@ -824,7 +1029,32 @@
     bossHits = 0;
     bossFinaleReady = false;
     bossFinaleTriggered = false;
+    bossPhase = 1;
+    bossShieldFruits = 0;
+    bossShieldSpawned = false;
     checkpointSaved = false;
+    routeChoice = "安全路线";
+    routeChoices = 0;
+    riskyRoutes = 0;
+    shortcutsFound = 0;
+    randomEventsCompleted = 0;
+    activeEvent = "";
+    eventBannerTime = 0;
+    magnetTime = 0;
+    giantFruitTime = 0;
+    freezeTime = 0;
+    shieldCharges = 0;
+    chaseModeTime = 0;
+    reverseChaseTime = 0;
+    reverseChaseHits = 0;
+    miniGameType = "";
+    miniGameTime = 0;
+    miniGameTarget = 0;
+    miniGameProgress = 0;
+    miniGameResolved = false;
+    treasureCollected = 0;
+    nextEndlessSupply = 60;
+    throwCooldown = 0;
     hero.x = 110;
     hero.y = groundY - hero.h;
     hero.vy = 0;
@@ -841,7 +1071,8 @@
 
   function startLevel(index, options = {}) {
     currentLevel = index;
-    practiceMode = Boolean(options.practice);
+    assistMode = Boolean(options.assist);
+    practiceMode = Boolean(options.practice) || assistMode;
     endlessMode = Boolean(options.endless);
     checkpointMode = Boolean(options.checkpoint);
     if (checkpointMode) practiceMode = true;
@@ -857,15 +1088,17 @@
       showToast("从中途检查点继续 · 本局不计最高分", 2200);
     }
     mode = "playing";
+    document.body.classList.add("is-playing");
     showScreen(null);
     frame.classList.add("is-playing");
     ui.practiceBadge.hidden = !practiceMode;
+    ui.practiceBadge.textContent = assistMode ? "加油模式" : checkpointMode ? "检查点练习" : "练习模式";
     ui.levelName.textContent = endlessMode ? `${characterName()} · 海口无尽挑战` : `${characterName()} · ${levelData[index].place} · 第 ${index + 1} 关`;
     ui.pauseButton.textContent = "Ⅱ";
     hideTutorial();
     audio.ensure();
     renderSupportPreview();
-    showToast(practiceMode ? `${characterName()}练习模式 · 第 ${index + 1} 关` : `${characterName()}：${CHARACTER_CONFIG[selectedCharacter].callout}`, 1800);
+    showToast(assistMode ? "加油模式 · 预警更早、速度更慢" : practiceMode ? `${characterName()}练习模式 · 第 ${index + 1} 关` : `${characterName()}：${CHARACTER_CONFIG[selectedCharacter].callout}`, 1800);
     if (!practiceMode) audio.speak(CHARACTER_CONFIG[selectedCharacter].callout);
     lastTime = performance.now();
     cancelAnimationFrame(animationId);
@@ -877,10 +1110,13 @@
     practiceMode = false;
     endlessMode = false;
     checkpointMode = false;
+    assistMode = false;
     frame.classList.remove("is-playing");
+    document.body.classList.remove("is-playing");
     showScreen("menu");
     hideTutorial();
     updateHud();
+    renderDaily();
   }
 
   function togglePause(force) {
@@ -915,12 +1151,23 @@
   }
 
   function throwFruit() {
-    if (mode !== "playing" || fruit <= 0) {
+    if (mode !== "playing" || throwCooldown > 0) return;
+    if (fruit <= 0) {
       if (mode === "playing") showToast("先捡一个水果！");
       return;
     }
     fruit -= 1;
-    projectiles.push({ x: hero.x + 16, y: hero.y + 55, vx: -860, vy: -110, angle: 0 });
+    throwCooldown = selectedCharacter === "longlong" ? .14 : .34;
+    const forwardThrow = reverseChaseTime > 0;
+    projectiles.push({
+      x: forwardThrow ? hero.x + hero.w - 4 : hero.x + 16,
+      y: hero.y + 55,
+      vx: forwardThrow ? 860 : -860,
+      vy: -110,
+      angle: 0,
+      forward: forwardThrow,
+      scale: giantFruitTime > 0 ? 1.9 : 1,
+    });
     audio.play("throw");
     updateHud();
     if (tutorialPhase === 3) {
@@ -1005,8 +1252,167 @@
     updateHud();
   }
 
+  function vibrate(pattern = 45) {
+    if (save.settings?.vibration && navigator.vibrate) navigator.vibrate(pattern);
+  }
+
+  function announceRichEvent(icon, title, message) {
+    activeEvent = `${icon} ${title}`;
+    eventBannerTime = assistMode ? 3.2 : 2.25;
+    showToast(`${icon} ${message}`, assistMode ? 2600 : 1900);
+    if (save.settings?.voiceHints) audio.speak(message);
+    vibrate([35, 35, 35]);
+  }
+
+  function spawnPowerup(kind, x = 1330, y = groundY - 150) {
+    entities.push({ type: "powerup", powerup: kind, x, y, w: 52, h: 52, spin: 0 });
+  }
+
+  function activatePowerup(kind) {
+    const config = POWERUP_CONFIG[kind];
+    if (!config) return;
+    if (kind === "magnet") magnetTime = Math.max(magnetTime, config.duration);
+    if (kind === "shield") shieldCharges += 1;
+    if (kind === "giantFruit") {
+      giantFruitTime = Math.max(giantFruitTime, config.duration);
+      fruit = Math.max(fruit, 3);
+    }
+    if (kind === "freeze") freezeTime = Math.max(freezeTime, config.duration);
+    rewardAction(250);
+    audio.play("pickup");
+    announceRichEvent(config.icon, config.name, `${config.name}启动！`);
+  }
+
+  function spawnRandomEvent(event) {
+    const config = RANDOM_EVENT_CONFIG[event.eventType];
+    if (!config) return;
+    const random = seededRandom(event.seed || runSeed);
+    announceRichEvent(config.icon, config.name, config.voice);
+    randomEventsCompleted += 1;
+    if (event.eventType === "coconutRain") {
+      for (let i = 0; i < 3; i += 1) {
+        const w = 60;
+        entities.push({
+          type: "obstacle", kind: "fallingRock", x: 1300 + i * 210, y: groundY - 290,
+          targetY: groundY - w, w, h: w, small: true, hit: false,
+          warning: assistMode ? 1.8 : 1.25 + i * .15, clearedCounted: false,
+        });
+      }
+    } else if (event.eventType === "catRescue") {
+      for (let i = 0; i < 3; i += 1) {
+        entities.push({ type: "rescue", kind: "rescueCat", x: 1320 + i * 190, y: groundY - 68, w: 92, h: 68, small: false, hit: false, clearedCounted: false });
+      }
+    } else if (event.eventType === "coinTrain") {
+      for (let i = 0; i < 12; i += 1) {
+        entities.push({ type: "coin", x: 1280 + i * 62, y: groundY - 95 - Math.sin(i / 11 * Math.PI * 2) * 95, w: 32, h: 32, spin: random() * 5 });
+      }
+    } else if (event.eventType === "clownRush") {
+      chaseDistance = Math.max(22, chaseDistance - (assistMode ? 12 : 24));
+      chaseModeTime = 5;
+      fruit = Math.max(1, fruit);
+    } else if (event.eventType === "treasure") {
+      entities.push({ type: "treasure", x: 1330, y: groundY - 78, w: 72, h: 72, spin: 0, powerup: Object.keys(POWERUP_CONFIG)[Math.floor(random() * 4)] });
+    }
+  }
+
+  function completeMiniGame() {
+    if (!miniGameType || miniGameResolved) return;
+    miniGameResolved = true;
+    const won = miniGameProgress >= miniGameTarget;
+    if (miniGameType === "reverseChase") reverseChaseTime = 0;
+    if (won) {
+      score += 900;
+      chargeFamily(30);
+      audio.play("record");
+      showToast("🏅 小挑战完成！奖励 900 分", 1700);
+      vibrate([45, 35, 75]);
+    } else {
+      showToast("差一点！继续跑，关卡不会失败", 1500);
+    }
+    const completedType = miniGameType;
+    setTimeout(() => {
+      if (miniGameResolved && miniGameType === completedType) {
+        miniGameType = "";
+        miniGameTime = 0;
+      }
+    }, 1300);
+  }
+
+  function startMiniGame(event) {
+    if (miniGameType && !miniGameResolved) completeMiniGame();
+    miniGameType = event.gameType;
+    miniGameTime = event.gameType === "reverseChase" ? 12 : 15;
+    miniGameProgress = 0;
+    miniGameResolved = false;
+    const random = seededRandom(event.seed || runSeed);
+    if (event.gameType === "reverseChase") {
+      miniGameTarget = 2;
+      reverseChaseTime = miniGameTime;
+      reverseChaseHits = 0;
+      fruit = Math.max(fruit, 3);
+      announceRichEvent("🔥", "反向追逐", "小丑跑到前面了！向前投水果命中两次！");
+    } else if (event.gameType === "airCoins") {
+      miniGameTarget = 8;
+      announceRichEvent("🪽", "空中收集", "连续跳跃，收集八枚空中金币！");
+      for (let i = 0; i < 12; i += 1) {
+        entities.push({
+          type: "coin", miniGame: "airCoins", x: 1320 + i * 78,
+          y: groundY - 170 - Math.sin(i / 11 * Math.PI * 3) * 105,
+          w: 32, h: 32, spin: random() * 5,
+        });
+      }
+    } else if (event.gameType === "rhythm") {
+      miniGameTarget = 4;
+      announceRichEvent("🎵", "节奏跳台", "跟着发光节奏，跳过四个跳台！");
+      for (let i = 0; i < 6; i += 1) {
+        entities.push({
+          type: "rhythmPad", x: 1320 + i * 175, y: groundY - 24,
+          w: 112, h: 24, beat: i, activated: false, spin: i * .7,
+        });
+      }
+    } else if (event.gameType === "hitCombo") {
+      miniGameTarget = 3;
+      fruit = 3;
+      announceRichEvent("🎯", "水果连击", "十五秒内，用水果连续命中小丑三次！");
+    }
+    updateHud();
+  }
+
+  function resolveBranch(entity) {
+    entity.chosen = true;
+    const airborne = hero.y < groundY - hero.h - 34;
+    const risky = airborne || boostTime > 0;
+    routeChoices += 1;
+    if (risky) riskyRoutes += 1;
+    routeChoice = risky ? "高空奖励路线" : "地面安全路线";
+    const y = risky ? groundY - 245 : groundY - 92;
+    const rewardCoins = risky ? 9 : 5;
+    for (let i = 0; i < rewardCoins; i += 1) {
+      entities.push({ type: "coin", x: hero.x + 230 + i * 58, y: y - Math.sin(i / Math.max(1, rewardCoins - 1) * Math.PI) * 48, w: 32, h: 32, spin: i * .6 });
+    }
+    const shortcut = entity.shortcutChar === selectedCharacter;
+    if (shortcut) {
+      shortcutsFound += 1;
+      score += 700;
+      spawnPowerup(Object.keys(POWERUP_CONFIG)[entity.seed % 4], hero.x + 620, y - 60);
+      announceRichEvent("✨", SHORTCUT_LABELS[selectedCharacter], `${characterName()}发现专属捷径！`);
+    } else {
+      showToast(`${risky ? "↑" : "→"} ${routeChoice}`, 1100);
+    }
+  }
+
   function spawnEntity(event) {
-    const kind = event.kind;
+    let kind = event.kind;
+    if (kind === "randomEvent") return spawnRandomEvent(event);
+    if (kind === "miniGame") return startMiniGame(event);
+    if (kind === "branchGate") {
+      entities.push({ type: "branch", x: 1330, y: groundY - 235, w: 110, h: 220, shortcutChar: event.shortcutChar, seed: event.seed, chosen: false });
+      announceRichEvent("↗", "路线分岔", "跳上高路拿更多奖励！");
+      return;
+    }
+    if (currentLevel === 5 && ["bossBanana", "bossBall"].includes(kind)) {
+      kind = bossPhase === 1 ? "bossBanana" : bossPhase === 2 ? "bossCar" : event.seed % 2 ? "bossCar" : "bossBall";
+    }
     if (kind === "fruitCache") {
       entities.push({ type: "fruit", x: 1330, y: groundY - 120, w: 40, h: 40, spin: 0 });
       return;
@@ -1017,7 +1423,7 @@
       coconut: [52, 52, true], seagull: [82, 42, false], rock: [92, 62, false],
       barrier: [110, 82, false], crack: [125, 18, false],
       rescueCat: [92, 68, false], wave: [138, 58, false], fallingRock: [82, 82, false],
-      bossBanana: [82, 28, false], bossBall: [64, 64, true],
+      bossBanana: [82, 28, false], bossBall: [64, 64, true], bossCar: [112, 58, true],
     };
     const [w, h, small] = specs[kind];
     const flying = kind === "seagull";
@@ -1081,6 +1487,15 @@
 
   function damagePlayer() {
     if (hero.invulnerable > 0) return;
+    if (shieldCharges > 0) {
+      shieldCharges -= 1;
+      hero.invulnerable = 1.5;
+      screenShake = .12;
+      audio.play("badge");
+      showToast("🛡️ 椰壳护盾挡住了碰撞！", 1200);
+      vibrate(55);
+      return;
+    }
     if (selectedCharacter === "doudou" && strengthGuard > 0) {
       strengthGuard -= 1;
       hero.invulnerable = 1.2;
@@ -1112,6 +1527,10 @@
     entity.dead = true;
     if (entity.type === "coin") {
       coins += 1;
+      if (entity.miniGame === "airCoins" && miniGameType === "airCoins" && !miniGameResolved) {
+        miniGameProgress += 1;
+        if (miniGameProgress >= miniGameTarget) completeMiniGame();
+      }
       if (currentLevel === 4) {
         nightTimeLeft = Math.min(45, nightTimeLeft + 1.25);
         nightCollectStreak += 1;
@@ -1159,8 +1578,24 @@
     const level = levelData[currentLevel];
     elapsed += dt;
     const progress = endlessMode ? (elapsed % 60) / 60 : Math.min(1, elapsed / level.duration);
+    if (currentLevel === 5 && !endlessMode) {
+      const nextBossPhase = progress < .34 ? 1 : progress < .68 ? 2 : 3;
+      if (nextBossPhase !== bossPhase) {
+        bossPhase = nextBossPhase;
+        if (bossPhase === 2) announceRichEvent("🚗", "玩具车冲锋", "小心玩具车，找机会反击！");
+        if (bossPhase === 3) announceRichEvent("🔔", "铃铛护盾", "先收集三枚发光水果！");
+      }
+      if (bossPhase === 3 && !bossShieldSpawned) {
+        bossShieldSpawned = true;
+        for (let i = 0; i < 3; i += 1) {
+          entities.push({ type: "shieldFruit", x: 1340 + i * 250, y: groundY - 160 - (i % 2) * 100, w: 48, h: 48, spin: i });
+        }
+      }
+    }
     const endlessSpeed = endlessMode ? Math.min(1.42, 1 + elapsed / 420) : 1;
-    const speed = level.speed * (practiceMode ? .82 : 1) * (boostTime > 0 ? 1.42 : 1) * endlessSpeed;
+    const helpSpeed = assistMode ? .68 : practiceMode ? .82 : 1;
+    const freezeScale = freezeTime > 0 ? .72 : 1;
+    const speed = level.speed * helpSpeed * (boostTime > 0 ? 1.42 : 1) * endlessSpeed * freezeScale;
     backgroundOffset += speed * dt * .22;
     locomotionDistance += speed * dt;
     if (currentLevel === 4 && !endlessMode) {
@@ -1177,6 +1612,17 @@
     familyAssistTime = Math.max(0, familyAssistTime - dt);
     clownStun = Math.max(0, clownStun - dt);
     screenShake = Math.max(0, screenShake - dt);
+    eventBannerTime = Math.max(0, eventBannerTime - dt);
+    magnetTime = Math.max(0, magnetTime - dt);
+    giantFruitTime = Math.max(0, giantFruitTime - dt);
+    freezeTime = Math.max(0, freezeTime - dt);
+    chaseModeTime = Math.max(0, chaseModeTime - dt);
+    reverseChaseTime = Math.max(0, reverseChaseTime - dt);
+    if (miniGameType && !miniGameResolved) {
+      miniGameTime = Math.max(0, miniGameTime - dt);
+      if (miniGameTime <= 0) completeMiniGame();
+    }
+    throwCooldown = Math.max(0, throwCooldown - dt);
     chaseDistance = Math.min(92, chaseDistance + dt * (boostTime > 0 ? 5.5 : .42));
 
     hero.vy += 2450 * dt;
@@ -1218,22 +1664,46 @@
       const segmentLevel = Math.floor(elapsed / 30) % 5;
       const nextSegment = buildCourse(segmentLevel, Math.floor(elapsed / 25));
       const offset = elapsed + 1.2;
-      courseEvents.push(...nextSegment.map((event) => ({ ...event, time: offset + (event.time - 2.2) * .62 })));
+      const compression = elapsed >= 120 ? .46 : elapsed >= 60 ? .54 : .62;
+      courseEvents.push(...nextSegment.map((event) => ({ ...event, time: offset + (event.time - 2.2) * compression })));
+    }
+    if (endlessMode && elapsed >= nextEndlessSupply) {
+      nextEndlessSupply += 60;
+      announceRichEvent("⛺", "补给区", "选择一件道具继续挑战！");
+      spawnPowerup("shield", 1320, groundY - 84);
+      spawnPowerup("magnet", 1510, groundY - 190);
+      spawnPowerup(elapsed >= 120 ? "giantFruit" : "freeze", 1700, groundY - 290);
     }
     if (!badgeSpawned && progress > .56) spawnBadge();
 
     for (const entity of entities) {
       entity.x -= speed * dt * (entity.type === "rescue" ? 1.18 : 1);
       entity.spin = (entity.spin || 0) + dt * 4;
+      if (entity.type === "coin" && magnetTime > 0) {
+        const dx = hero.x + hero.w / 2 - (entity.x + entity.w / 2);
+        const dy = hero.y + hero.h / 2 - (entity.y + entity.h / 2);
+        const distance = Math.hypot(dx, dy);
+        if (distance < 360) {
+          entity.x += dx * Math.min(1, dt * 7);
+          entity.y += dy * Math.min(1, dt * 7);
+        }
+      }
       if (entity.kind === "fallingRock" && entity.warning > 0) {
         entity.warning -= dt;
       } else if (entity.kind === "fallingRock" && entity.y < entity.targetY) {
         entity.y = Math.min(entity.targetY, entity.y + 520 * dt);
       }
-      if (entity.type === "obstacle" && !entity.hit && intersects(hero, entity, 14)) {
+      if (entity.type === "branch" && !entity.chosen && entity.x <= hero.x + 80) {
+        resolveBranch(entity);
+      } else if (entity.type === "obstacle" && !entity.hit && intersects(hero, entity, 14)) {
         if (entity.kind === "fallingRock" && entity.warning > 0) continue;
         entity.hit = true;
-        if (boostTime > 0 && entity.small) {
+        if (selectedCharacter === "doudou" && ["crate", "barrier"].includes(entity.kind)) {
+          entity.dead = true;
+          rewardAction(220);
+          addBurst(entity.x + entity.w / 2, entity.y + entity.h / 2, "#ffd15b", 13);
+          showToast("豆豆撞开力量路线！", 850);
+        } else if (boostTime > 0 && entity.small) {
           entity.dead = true;
           rewardAction(150);
           addBurst(entity.x + entity.w / 2, entity.y + entity.h / 2, "#fff3c0", 10);
@@ -1249,8 +1719,34 @@
         rewardAction(350);
         audio.play("pickup");
         showToast(`救到小猫 ${catsRescued}/3！`, 900);
+      } else if (entity.type === "rhythmPad" && !entity.activated && entity.x < hero.x + hero.w && entity.x + entity.w > hero.x) {
+        entity.activated = true;
+        if (hero.y < groundY - hero.h - 20 && miniGameType === "rhythm" && !miniGameResolved) {
+          miniGameProgress += 1;
+          rewardAction(180);
+          audio.play("coin");
+          addBurst(entity.x + entity.w / 2, entity.y, "#62efff", 12);
+          showToast(`🎵 节奏跳台 ${miniGameProgress}/${miniGameTarget}`, 650);
+          if (miniGameProgress >= miniGameTarget) completeMiniGame();
+        }
       } else if (["coin", "fruit", "badge"].includes(entity.type) && intersects(hero, entity, selectedCharacter === "xiaojia" ? -30 : 8)) {
         collect(entity);
+      } else if (entity.type === "powerup" && intersects(hero, entity, selectedCharacter === "xiaojia" ? -24 : 4)) {
+        entity.dead = true;
+        activatePowerup(entity.powerup);
+      } else if (entity.type === "treasure" && intersects(hero, entity, 2)) {
+        entity.dead = true;
+        treasureCollected += 1;
+        activatePowerup(entity.powerup);
+        showToast(`🎁 宝箱开启：${POWERUP_CONFIG[entity.powerup].name}`, 1500);
+      } else if (entity.type === "shieldFruit" && intersects(hero, entity, selectedCharacter === "xiaojia" ? -26 : 4)) {
+        entity.dead = true;
+        bossShieldFruits = Math.min(3, bossShieldFruits + 1);
+        fruit = Math.min(3, fruit + 1);
+        rewardAction(400);
+        audio.play("badge");
+        showToast(bossShieldFruits >= 3 ? "🔔 铃铛护盾破了！投水果反击！" : `发光水果 ${bossShieldFruits}/3`, 1500);
+        if (bossShieldFruits >= 3) vibrate([60, 40, 90]);
       }
       if (!entity.clearedCounted && entity.x + entity.w < hero.x - 15) {
         entity.clearedCounted = true;
@@ -1269,7 +1765,10 @@
       projectile.x += projectile.vx * dt;
       projectile.y += projectile.vy * dt;
       projectile.angle -= dt * 9;
-      if (!projectile.hit && projectile.x <= clownX + 108) {
+      const reachedClown = projectile.forward
+        ? projectile.x >= clownX + 10
+        : projectile.x <= clownX + 108;
+      if (!projectile.hit && reachedClown) {
         projectile.hit = true;
         projectile.dead = true;
         clownStun = 2.3;
@@ -1278,9 +1777,23 @@
         audio.play("hitClown");
         showToast("命中！小丑打滑了！", 1200);
         addBurst(clownX + 55, groundY - 70, "#ff785d", 15);
+        if (!miniGameResolved && ["reverseChase", "hitCombo"].includes(miniGameType)) {
+          miniGameProgress += 1;
+          if (miniGameType === "reverseChase") reverseChaseHits = miniGameProgress;
+          if (miniGameProgress >= miniGameTarget) completeMiniGame();
+        }
         if (currentLevel === 5) {
-          bossHits = Math.min(3, bossHits + 1);
-          if (bossHits >= 3) {
+          const canDamage = bossPhase === 1
+            ? bossHits < 1
+            : bossPhase === 2
+              ? bossHits < 2
+              : bossShieldFruits >= 3 && bossHits < 3;
+          if (canDamage) bossHits = Math.min(3, bossHits + 1);
+          if (bossPhase === 3 && bossShieldFruits < 3) {
+            showToast(`🔔 护盾挡住了！先收集发光水果 ${bossShieldFruits}/3`, 1700);
+          } else if (!canDamage && bossHits < 3) {
+            showToast(`小丑逃跑了，进入第 ${Math.min(3, bossPhase + 1)} 阶段再攻击！`, 1300);
+          } else if (bossHits >= 3) {
             bossFinaleReady = true;
             familyPower = 100;
             showToast(`第三次命中！按 G 发动${supportSkillName()}！`, 2400);
@@ -1289,7 +1802,7 @@
           }
         }
       }
-      if (projectile.x < -80 || projectile.y > 760) projectile.dead = true;
+      if (projectile.x < -80 || projectile.x > canvas.width + 100 || projectile.y > 760) projectile.dead = true;
     }
 
     for (const particle of particles) {
@@ -1370,6 +1883,7 @@
     const finalScore = Math.floor(score + elapsed * 25);
     const previousBest = save.endlessBest || 0;
     save.endlessBest = Math.max(previousBest, finalScore);
+    applyRunToDaily();
     persist();
     resultSnapshot = {
       endless: true, won: false, stars: 0, coins, score: finalScore, badgeCollected: false,
@@ -1396,10 +1910,12 @@
     resultSnapshot = {
       won, stars, coins, score: finalScore, badgeCollected, energy,
       collisions, maxComboMultiplier, previousBest, newRecord, practice: practiceMode,
+      assist: assistMode,
       character: characterName(), familyCalls, missionStatus: missionStatus(),
       catsRescued, catsMissed, wavesCleared, waveHits, rocksDodged, rockHits,
       nightTimeLeft, maxNightCollectStreak, bossHits,
     };
+    applyRunToDaily();
 
     if (won) {
       save.stars[currentLevel] = Math.max(save.stars[currentLevel], stars);
@@ -1438,6 +1954,7 @@
   function showResult() {
     const result = resultSnapshot;
     mode = "result";
+    document.body.classList.remove("is-playing");
     const title = document.querySelector("#resultTitle");
     const kicker = document.querySelector("#resultKicker");
     const stars = document.querySelector("#resultStars");
@@ -1482,7 +1999,7 @@
           : selectedCharacter === "doudou" ? "assets/doudou-run-1.png" : "assets/longdou.webp";
     resultCharacter.alt = `${result.character}庆祝`;
 
-    kicker.textContent = result.practice ? "练习模式成绩" : result.won ? `第 ${currentLevel + 1} 关完成` : "小丑追上来了";
+    kicker.textContent = result.assist ? "加油模式成绩" : result.practice ? "练习模式成绩" : result.won ? `第 ${currentLevel + 1} 关完成` : "小丑追上来了";
     title.textContent = result.won ? `${result.character}通过${levelData[currentLevel].name}！` : `水果网救下了${result.character}`;
     stars.textContent = result.won ? `${"★ ".repeat(result.stars)}${"☆ ".repeat(3 - result.stars)}`.trim() : "☆ ☆ ☆";
     summary.textContent = `金币 ${result.coins} · ${supportSkillName()} ${result.familyCalls} 次 · 碰撞 ${result.collisions} 次 · 最高连击 ×${result.maxComboMultiplier} · 得分 ${result.score}`;
@@ -1498,17 +2015,17 @@
     });
 
     record.textContent = result.practice
-      ? "练习模式不记录最高分"
+      ? `${result.assist ? "加油" : "练习"}模式不记录最高分`
       : result.newRecord
         ? `🎉 新纪录！原纪录 ${result.previousBest || 0} → ${result.score} · 路线${save.recordRoutes[selectedCharacter][currentLevel]}`
         : `个人纪录 ${Math.max(result.previousBest, result.score) || "—"}${save.recordRoutes[selectedCharacter][currentLevel] ? ` · 路线${save.recordRoutes[selectedCharacter][currentLevel]}` : ""}`;
 
     if (!result.won) {
       advice.textContent = save.failures[currentLevel] >= 3
-        ? "已经连续失败三次，可以先进入练习模式熟悉障碍。"
+        ? "已经连续失败三次，可以进入加油模式：速度更慢、预警更早。"
         : "下一局先减少一次碰撞，保住能量就能跑得更远。";
     } else if (result.practice) {
-      advice.textContent = "练习完成！回到正式模式才能获得第三星和刷新纪录。";
+      advice.textContent = "加油模式完成！回到正式模式才能获得第三星和刷新纪录。";
     } else if (!result.missionStatus[0]) {
       advice.textContent = `下一局完成“${level.goals[1]}”，就能获得第二星。`;
     } else if (!result.missionStatus[1]) {
@@ -1533,6 +2050,10 @@
   }
 
   function clownDrawX() {
+    if (reverseChaseTime > 0) {
+      const dash = Math.sin(elapsed * 5.2) * 18;
+      return Math.min(canvas.width - 145, hero.x + 250 + dash);
+    }
     const bossSlide = currentLevel === 5 && bossHits > 0 ? Math.sin(elapsed * (bossHits >= 2 ? 4.2 : 2.8)) * (bossHits >= 2 ? 62 : 34) : 0;
     return Math.max(12, hero.x - 150 + (92 - chaseDistance) * 1.55 + bossSlide);
   }
@@ -1768,6 +2289,18 @@
     const clownGround = groundY - bossLift;
     const y = clownGround - h;
     ctx.save();
+    if (currentLevel === 5 && bossPhase === 3 && bossShieldFruits < 3) {
+      ctx.strokeStyle = `hsla(${(elapsed * 120) % 360} 95% 62% / .9)`;
+      ctx.lineWidth = 9;
+      ctx.shadowColor = "#7af5ff";
+      ctx.shadowBlur = 24;
+      ctx.beginPath();
+      ctx.ellipse(x + 65, y + 68, 78, 88, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.font = "25px system-ui";
+      ctx.fillText("🔔", x + 52, y - 13);
+    }
     if (clownStun > 0) {
       const slipW = 158;
       ctx.translate(x + slipW / 2, y + h / 2 - 4);
@@ -1825,7 +2358,70 @@
   function drawEntity(item) {
     const { x, y, w, h } = item;
     ctx.save();
-    if (item.type === "coin") {
+    if (item.type === "branch") {
+      ctx.globalAlpha = item.chosen ? .28 : 1;
+      roundedRect(x, y + 18, w, 72, 16, "rgba(10,67,78,.88)", "#fff2a8");
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.font = "bold 24px system-ui";
+      ctx.fillText("↗ 高空奖励", x + w / 2, y + 49);
+      ctx.font = "bold 17px system-ui";
+      ctx.fillText("→ 地面安全", x + w / 2, y + 77);
+      ctx.fillStyle = "#ffd64d";
+      ctx.font = "bold 15px system-ui";
+      ctx.fillText(CHARACTER_CONFIG[item.shortcutChar].name + "捷径", x + w / 2, y + 112);
+    } else if (item.type === "rhythmPad") {
+      const pulse = .5 + Math.sin(elapsed * 8 - item.beat * .85) * .5;
+      ctx.globalAlpha = item.activated ? .35 : 1;
+      ctx.shadowColor = item.activated ? "#78ef8e" : "#5ceaff";
+      ctx.shadowBlur = item.activated ? 8 : 10 + pulse * 18;
+      roundedRect(x, y, w, h, 10, item.activated ? "#58c96d" : "#1fbcd1", "#efffff");
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 19px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(item.activated ? "✓" : "♪ 跳", x + w / 2, y - 9 - pulse * 7);
+    } else if (item.type === "powerup") {
+      ctx.translate(x + w / 2, y + h / 2);
+      ctx.rotate(Math.sin(item.spin) * .12);
+      ctx.shadowColor = "#8ff7ff";
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = "rgba(255,255,255,.94)";
+      ctx.strokeStyle = "#11343c";
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.font = "32px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(POWERUP_CONFIG[item.powerup].icon, 0, 1);
+    } else if (item.type === "treasure") {
+      ctx.translate(x + w / 2, y + h / 2 + Math.sin(item.spin) * 4);
+      ctx.font = "58px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("🎁", 0, 0);
+      ctx.font = "bold 15px system-ui";
+      ctx.fillStyle = "#fff";
+      ctx.strokeStyle = "#112e35";
+      ctx.lineWidth = 4;
+      ctx.strokeText("追上宝箱！", 0, -48);
+      ctx.fillText("追上宝箱！", 0, -48);
+    } else if (item.type === "shieldFruit") {
+      ctx.translate(x + w / 2, y + h / 2);
+      ctx.rotate(item.spin * .16);
+      ctx.shadowColor = "#79f5ff";
+      ctx.shadowBlur = 22;
+      ctx.fillStyle = "#ffcc36";
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(0, 0, 21, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#35b7c9";
+      ctx.font = "24px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("🔔", 0, 1);
+    } else if (item.type === "coin") {
       ctx.translate(x + w / 2, y + h / 2);
       if (currentLevel === 4) {
         ctx.shadowColor = Math.floor(item.spin * 2) % 2 ? "#ff59d6" : "#55f4ff";
@@ -1914,6 +2510,16 @@
       ctx.quadraticCurveTo(x + w * .76, y + 2 - wave, x + w, y + 18);
       ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = "#eaffff"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(x + 8, y + 23); ctx.quadraticCurveTo(x + w * .3, y - 3 + wave, x + w * .52, y + 23); ctx.stroke();
+    } else if (kind === "bossCar") {
+      ctx.font = "70px system-ui";
+      ctx.fillText("🚗", x, y + h + 5);
+      ctx.fillStyle = "#ffdf47";
+      ctx.strokeStyle = "#8b2d21";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + w / 2, y - 45); ctx.lineTo(x + w / 2 - 18, y - 12); ctx.lineTo(x + w / 2 + 18, y - 12); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#8b2d21"; ctx.font = "bold 21px system-ui"; ctx.fillText("!", x + w / 2 - 4, y - 17);
     } else if (kind === "bossBanana") {
       ctx.font = "54px system-ui"; ctx.fillText("🍌", x, y + h + 12);
     } else if (kind === "seagull") {
@@ -1925,7 +2531,7 @@
 
   function drawProjectile(item) {
     ctx.save();
-    ctx.translate(item.x, item.y); ctx.rotate(item.angle);
+    ctx.translate(item.x, item.y); ctx.rotate(item.angle); ctx.scale(item.scale || 1, item.scale || 1);
     ctx.fillStyle = "#ff9f27"; ctx.strokeStyle = "#783d16"; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.ellipse(0, 0, 17, 13, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.fillStyle = "#4ea957"; ctx.beginPath(); ctx.ellipse(9, -11, 9, 4, -.4, 0, Math.PI * 2); ctx.fill();
@@ -1936,6 +2542,50 @@
     for (const p of particles) {
       ctx.save(); ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillStyle = p.color;
       ctx.fillRect(p.x, p.y, p.size, p.size); ctx.restore();
+    }
+  }
+
+  function drawRichOverlay() {
+    if (eventBannerTime > 0 && activeEvent) {
+      const alpha = Math.min(1, eventBannerTime * 2);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      roundedRect(canvas.width / 2 - 150, 110, 300, 54, 22, "rgba(9,62,73,.9)", "#fff2a8");
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 27px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(activeEvent, canvas.width / 2, 146);
+      ctx.restore();
+    }
+    const powers = [];
+    if (magnetTime > 0) powers.push(`🧲${magnetTime.toFixed(0)}s`);
+    if (shieldCharges > 0) powers.push(`🛡️×${shieldCharges}`);
+    if (giantFruitTime > 0) powers.push(`🍉${giantFruitTime.toFixed(0)}s`);
+    if (freezeTime > 0) powers.push(`🥤${freezeTime.toFixed(0)}s`);
+    if (powers.length) {
+      ctx.save();
+      roundedRect(canvas.width - 310, 112, 270, 48, 18, "rgba(255,250,220,.9)");
+      ctx.fillStyle = "#17333c";
+      ctx.font = "bold 21px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(powers.join("  "), canvas.width - 175, 144);
+      ctx.restore();
+    }
+    if (miniGameType) {
+      const miniLabels = {
+        reverseChase: ["🔥 反向追逐", "#ef513f"],
+        airCoins: ["🪽 空中收集", "#f2b82e"],
+        rhythm: ["🎵 节奏跳台", "#20b9d0"],
+        hitCombo: ["🎯 水果连击", "#ef513f"],
+      };
+      const [label, color] = miniLabels[miniGameType] || ["小挑战", "#20b9d0"];
+      ctx.save();
+      roundedRect(canvas.width / 2 - 170, 178, 340, 58, 18, "rgba(8,47,57,.9)", color);
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 22px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(`${label}  ${miniGameProgress}/${miniGameTarget}  ·  ${miniGameTime.toFixed(0)}秒`, canvas.width / 2, 214);
+      ctx.restore();
     }
   }
 
@@ -1952,6 +2602,7 @@
     drawHero();
     drawFamilyAssist();
     drawParticles();
+    drawRichOverlay();
     ctx.restore();
   }
 
@@ -1979,7 +2630,7 @@
     ui.familyButton.hidden = familyPower < 100 || familyAssistTime > 0;
     ui.throwButton.disabled = fruit <= 0;
     ui.boostButton.disabled = boost < 100 && boostTime <= 0;
-    const missionText = endlessMode
+    let missionText = endlessMode
       ? `无尽挑战 ${Math.floor(elapsed)}秒 · 速度 ${Math.round(100 + Math.min(42, elapsed / 4.2))}%`
       : currentLevel === 0
       ? `任务：找回徽章${selectedCharacter === "doudou" && strengthGuard ? " · 🛡️力量护盾" : ""}`
@@ -1987,7 +2638,21 @@
         : currentLevel === 2 ? `踏浪 ${wavesCleared}/5 · 被浪打中 ${waveHits}`
           : currentLevel === 3 ? `躲落石 ${rocksDodged}/5 · 命中 ${rockHits}`
             : currentLevel === 4 ? `夜赛剩余 ${nightTimeLeft.toFixed(1)}秒 · 连续收集 ${maxNightCollectStreak}/10`
-              : bossFinaleReady ? `按 G 发动${supportSkillName()}完成决战` : `命中小丑 ${bossHits}/3`;
+              : bossFinaleReady
+                ? `按 G 发动${supportSkillName()}完成决战`
+                : bossPhase === 1
+                  ? `Boss ① 香蕉皮滑道 · 命中 ${bossHits}/1`
+                  : bossPhase === 2
+                    ? `Boss ② 玩具车冲锋 · 命中 ${bossHits}/2`
+                    : bossShieldFruits < 3
+                      ? `Boss ③ 铃铛护盾 · 发光水果 ${bossShieldFruits}/3`
+                      : `Boss ③ 护盾已破 · 命中 ${bossHits}/3`;
+    if (!endlessMode && routeChoices > 0) missionText += ` · ${routeChoice}`;
+    if (miniGameType) {
+      const miniNames = { reverseChase: "反向追逐", airCoins: "空中收集", rhythm: "节奏跳台", hitCombo: "水果连击" };
+      missionText += ` · ${miniNames[miniGameType]} ${miniGameProgress}/${miniGameTarget}`;
+    }
+    if (assistMode) missionText = `🌱 加油模式 · ${missionText}`;
     ui.mission.textContent = missionText;
   }
 
@@ -2041,13 +2706,15 @@
   document.querySelector("#clearProgressButton").addEventListener("click", () => {
     if (!window.confirm("确定清除《龙豆跑酷》的全部关卡进度吗？")) return;
     save = defaultSave();
+    ensureDaily();
     selectedCharacter = "longlong";
     persist();
     renderLevelGrid();
+    renderDaily();
     showToast("进度已清除");
   });
   document.querySelector("#restoreProgressButton").addEventListener("click", () => {
-    const backup = localStorage.getItem(`${STORAGE_KEY}-backup-v3`);
+    const backup = localStorage.getItem(`${STORAGE_KEY}-backup-v4`) || localStorage.getItem(`${STORAGE_KEY}-backup-v3`);
     if (!backup || !window.confirm("恢复改版前的关卡进度吗？当前新版进度会被替换。")) return;
     localStorage.setItem(STORAGE_KEY, backup);
     save = loadSave();
@@ -2059,11 +2726,11 @@
   });
   document.querySelector("#storyContinueButton").addEventListener("click", () => { const action = storyAction; storyAction = null; if (action) action(); });
   document.querySelector("#skipStoryButton").addEventListener("click", () => { const action = storyAction; storyAction = null; if (action) action(); });
-  document.querySelector("#retryButton").addEventListener("click", () => startLevel(currentLevel, { practice: practiceMode, retry: true }));
-  document.querySelector("#practiceButton").addEventListener("click", () => startLevel(currentLevel, { practice: true }));
+  document.querySelector("#retryButton").addEventListener("click", () => startLevel(currentLevel, { practice: practiceMode, assist: assistMode, retry: true }));
+  document.querySelector("#practiceButton").addEventListener("click", () => startLevel(currentLevel, { assist: true }));
   document.querySelector("#nextButton").addEventListener("click", nextLevel);
   document.querySelector("#changeCharacterButton").addEventListener("click", () => {
-    openCharacterSelect(() => startLevel(currentLevel, { practice: practiceMode, retry: true }));
+    openCharacterSelect(() => startLevel(currentLevel, { practice: practiceMode, assist: assistMode, retry: true }));
   });
   document.querySelector("#resultMenuButton").addEventListener("click", goMenu);
   document.querySelector("#resumeButton").addEventListener("click", () => togglePause(false));
@@ -2084,6 +2751,15 @@
   }
   ui.soundButton.addEventListener("click", toggleSound);
   ui.mobileSoundButton.addEventListener("click", (event) => { event.stopPropagation(); toggleSound(); });
+  document.querySelector("#voiceHintToggle").addEventListener("click", () => {
+    save.settings.voiceHints = !save.settings.voiceHints;
+    persist(); renderDaily();
+  });
+  document.querySelector("#vibrationToggle").addEventListener("click", () => {
+    save.settings.vibration = !save.settings.vibration;
+    persist(); renderDaily();
+    if (save.settings.vibration) vibrate(45);
+  });
   document.addEventListener("pointerdown", () => { if (audio.enabled) audio.unlock(); }, { capture: true, once: true });
   canvas.addEventListener("pointerdown", jump);
   window.addEventListener("keydown", handleKey, { passive: false });
@@ -2095,6 +2771,7 @@
   renderLevelGrid();
   renderCharacterSelect();
   renderCheckpointButton();
+  renderDaily();
   updateHud();
 
   const waitForImage = (image) => new Promise((resolve) => {

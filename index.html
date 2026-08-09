@@ -14,7 +14,7 @@
     <link rel="preload" as="image" href="assets/clown-skate-1.webp" fetchpriority="high" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2216%22 fill=%22%23ff6f59%22/><text x=%2232%22 y=%2244%22 text-anchor=%22middle%22 font-size=%2238%22>龙</text></svg>" />
     <title>龙豆跑酷</title>
-    <link rel="stylesheet" href="styles.css?v=20260809-complete3" />
+    <link rel="stylesheet" href="styles.css?v=20260809-rich1" />
   </head>
   <body>
     <main class="game-shell" aria-label="龙豆跑酷网页游戏">
@@ -74,7 +74,7 @@
           <span>三星 <b id="targetValue">0</b></span>
           <span>纪录 <b id="bestValue">0</b></span>
           <strong id="comboValue" class="combo-value">连击 ×1</strong>
-          <em id="practiceBadge" class="practice-badge" hidden>练习模式</em>
+          <em id="practiceBadge" class="practice-badge" hidden>加油模式</em>
         </div>
         <div id="missionHud" class="mission-hud" aria-live="polite">任务：到达终点</div>
 
@@ -95,6 +95,14 @@
             <button id="adventureButton" class="primary-button" type="button" disabled>正在加载游戏…</button>
             <button id="checkpointButton" class="secondary-button checkpoint-button" type="button" hidden>从中途检查点继续</button>
             <button id="levelSelectButton" class="text-button" type="button">选择关卡</button>
+            <section class="daily-card" aria-label="今日家庭挑战">
+              <div class="daily-heading"><b>今日家庭挑战</b><span id="fruitMedals">水果奖章 0</span></div>
+              <div id="dailyTasks" class="daily-tasks"></div>
+              <div class="daily-settings">
+                <button id="voiceHintToggle" type="button">童声提示 开</button>
+                <button id="vibrationToggle" type="button">手机震动 开</button>
+              </div>
+            </section>
           </div>
           <div class="menu-tip">空格跳跃 · F 投水果 · Shift 加速 · G 家人技能</div>
         </div>
@@ -185,7 +193,7 @@
             </div>
             <div class="result-actions">
               <button id="retryButton" class="primary-button" type="button">立即重试</button>
-              <button id="practiceButton" class="secondary-button" type="button" hidden>进入练习模式</button>
+              <button id="practiceButton" class="secondary-button" type="button" hidden>进入加油模式</button>
               <button id="nextButton" class="secondary-button" type="button">下一关</button>
               <button id="changeCharacterButton" class="secondary-button" type="button">换主角</button>
               <button id="resultMenuButton" class="text-button" type="button">返回主页</button>
@@ -232,6 +240,6 @@
       <span>↻</span><b>请把手机横过来玩</b>
     </div>
 
-    <script src="game.js?v=20260809-remake6"></script>
+    <script src="game.js?v=20260809-rich1"></script>
   </body>
 </html>
