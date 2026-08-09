@@ -157,9 +157,15 @@
   doudouVictoryImage.fetchPriority = "high";
   doudouVictoryImage.src = "assets/doudou-victory-full.png";
   const familyImages = {};
-  for (const name of ["xiaojia-enter", "xiaojia-throw", "xiaoze-enter", "xiaoze-throw"]) {
+  const familyImageFiles = {
+    "xiaojia-enter": "xiaojia-enter.png",
+    "xiaojia-throw": "xiaojia-throw.png",
+    "xiaoze-enter": "xiaoze-enter-v2.png",
+    "xiaoze-throw": "xiaoze-throw-v2.png",
+  };
+  for (const [name, file] of Object.entries(familyImageFiles)) {
     familyImages[name] = new Image();
-    familyImages[name].src = `assets/${name}.png`;
+    familyImages[name].src = `assets/${file}`;
   }
   const clownSkateImages = [1, 2, 3, 4].map((frame) => {
     const image = new Image();
