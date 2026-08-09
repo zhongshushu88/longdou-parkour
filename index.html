@@ -7,10 +7,12 @@
     <meta name="robots" content="noindex, nofollow, noarchive" />
     <link rel="preload" as="image" href="assets/scene-1-qilou.webp" fetchpriority="high" />
     <link rel="preload" as="image" href="assets/longdou-run-1.webp" fetchpriority="high" />
+    <link rel="preload" as="image" href="assets/doudou-run-1.png" fetchpriority="high" />
+    <link rel="preload" as="image" href="assets/doudou-victory-full.png" fetchpriority="high" />
     <link rel="preload" as="image" href="assets/clown-skate-1.webp" fetchpriority="high" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2216%22 fill=%22%23ff6f59%22/><text x=%2232%22 y=%2244%22 text-anchor=%22middle%22 font-size=%2238%22>龙</text></svg>" />
     <title>龙豆跑酷</title>
-    <link rel="stylesheet" href="styles.css?v=20260802-v2" />
+    <link rel="stylesheet" href="styles.css?v=20260809-complete" />
   </head>
   <body>
     <main class="game-shell" aria-label="龙豆跑酷网页游戏">
@@ -19,7 +21,7 @@
           <span class="brand-mark">龙</span>
           <div>
             <h1>龙豆跑酷</h1>
-            <p id="levelName">海口大冒险</p>
+            <p id="levelName">龙龙和豆豆的海口大冒险</p>
           </div>
         </div>
 
@@ -53,6 +55,11 @@
           <div class="meter-track"><i id="boostFill"></i></div>
           <b id="boostState">0%</b>
         </div>
+        <div class="meter family-meter">
+          <span>家人能量</span>
+          <div class="meter-track"><i id="familyFill"></i></div>
+          <b id="familyState">0%</b>
+        </div>
       </section>
 
       <section id="gameFrame" class="game-frame">
@@ -73,23 +80,47 @@
         <div id="menuScreen" class="screen menu-screen is-visible">
           <div class="menu-art" aria-hidden="true">
             <img class="menu-clown" src="assets/clown.webp" alt="" />
-            <img class="menu-hero" src="assets/longdou.webp" alt="" />
+            <img class="menu-hero menu-longlong" src="assets/longdou.webp" alt="" />
+            <img class="menu-hero menu-doudou" src="assets/doudou-victory-full.png" alt="" />
           </div>
           <div class="menu-copy">
             <p class="eyebrow">海口 · 六关大冒险</p>
             <h2>龙豆跑酷</h2>
-            <p>夺回城市徽章，甩开穿轮滑鞋的小丑！</p>
+            <p>龙龙和豆豆，夺回城市徽章！</p>
             <button id="adventureButton" class="primary-button" type="button" disabled>正在加载游戏…</button>
             <button id="levelSelectButton" class="text-button" type="button">选择关卡</button>
           </div>
-          <div class="menu-tip">空格跳跃 · F 投水果 · Shift 加速</div>
+          <div class="menu-tip">空格跳跃 · F 投水果 · Shift 加速 · G 兄妹合击</div>
+        </div>
+
+        <div id="characterScreen" class="screen character-screen">
+          <div class="panel character-panel">
+            <p class="eyebrow">选择本局主角</p>
+            <h2>龙龙还是豆豆？</h2>
+            <div class="character-grid">
+              <button id="chooseLonglongButton" class="character-card longlong-card" type="button">
+                <img src="assets/longdou.webp" alt="龙龙" />
+                <span><b>龙龙</b><small>热血轻快 · “冲呀！”</small><em id="longlongRecord">六关纪录 0 分</em></span>
+              </button>
+              <button id="chooseDoudouButton" class="character-card doudou-card" type="button">
+                <img src="assets/doudou-victory-full.png" alt="豆豆" />
+                <span><b>豆豆</b><small>高大壮实 · “看我的！”</small><em id="doudouRecord">六关纪录 0 分</em></span>
+              </button>
+            </div>
+            <div class="support-card">
+              <img src="assets/xiaojia-enter.png" alt="小嘉" />
+              <div><b>家人支援队</b><span>小嘉＋小泽 · 能量满后发动兄妹合击</span></div>
+              <img src="assets/xiaoze-enter.png" alt="小泽" />
+            </div>
+            <button id="characterBackButton" class="text-button" type="button">返回主页</button>
+          </div>
         </div>
 
         <div id="storyScreen" class="screen story-screen" aria-live="polite">
           <div class="story-stage">
             <img class="story-clown" src="assets/clown.webp" alt="轮滑小丑" />
             <div class="badge-orbit" aria-hidden="true">◈ ◈ ◈</div>
-            <img class="story-hero" src="assets/longdou.webp" alt="龙豆" />
+            <img id="storyHero" class="story-hero" src="assets/longdou.webp" alt="龙龙" />
           </div>
           <div class="story-card">
             <p id="storyKicker" class="eyebrow">故事开始</p>
@@ -115,6 +146,7 @@
           <div class="panel result-panel">
             <p id="resultKicker" class="eyebrow">本关结束</p>
             <h2 id="resultTitle">继续加油！</h2>
+            <img id="resultCharacter" class="result-character" src="assets/longdou.webp" alt="龙龙庆祝" />
             <div id="resultStars" class="result-stars">☆ ☆ ☆</div>
             <p id="resultSummary"></p>
             <div class="star-goals" aria-label="本关三星目标">
@@ -132,6 +164,7 @@
               <button id="retryButton" class="primary-button" type="button">立即重试</button>
               <button id="practiceButton" class="secondary-button" type="button" hidden>进入练习模式</button>
               <button id="nextButton" class="secondary-button" type="button">下一关</button>
+              <button id="changeCharacterButton" class="secondary-button" type="button">换主角</button>
               <button id="resultMenuButton" class="text-button" type="button">返回主页</button>
             </div>
           </div>
@@ -152,6 +185,9 @@
         </div>
 
         <div class="touch-controls" aria-label="触屏操作">
+          <button id="familyButton" class="action-button family-button" type="button" hidden>
+            <span>👫</span><b>兄妹合击</b>
+          </button>
           <button id="throwButton" class="action-button fruit-button" type="button">
             <span>🥭</span><b>投掷</b>
           </button>
@@ -165,6 +201,7 @@
         <span><kbd>空格</kbd> 跳跃 / 二段跳</span>
         <span><kbd>F</kbd> 投水果</span>
         <span><kbd>Shift</kbd> 椰风冲刺</span>
+        <span><kbd>G</kbd> 兄妹合击</span>
       </footer>
     </main>
 
@@ -172,6 +209,6 @@
       <span>↻</span><b>请把手机横过来玩</b>
     </div>
 
-    <script src="game.js?v=20260802-v2"></script>
+    <script src="game.js?v=20260809-fullbody2"></script>
   </body>
 </html>

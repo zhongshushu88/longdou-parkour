@@ -31,10 +31,14 @@
     best: document.querySelector("#bestValue"),
     combo: document.querySelector("#comboValue"),
     practiceBadge: document.querySelector("#practiceBadge"),
+    familyFill: document.querySelector("#familyFill"),
+    familyState: document.querySelector("#familyState"),
+    familyButton: document.querySelector("#familyButton"),
   };
 
   const screens = {
     menu: document.querySelector("#menuScreen"),
+    characters: document.querySelector("#characterScreen"),
     story: document.querySelector("#storyScreen"),
     levels: document.querySelector("#levelScreen"),
     result: document.querySelector("#resultScreen"),
@@ -132,14 +136,30 @@
     }));
   }
 
-  const heroRunImages = [1, 2, 3, 4].map((frame) => {
+  const longlongRunImages = [1, 2, 3, 4].map((frame) => {
     const image = new Image();
     image.fetchPriority = frame === 1 ? "high" : "low";
     image.src = `assets/longdou-run-${frame}.webp`;
     return image;
   });
-  const heroJumpImage = new Image();
-  heroJumpImage.src = "assets/longdou-jump.webp";
+  const longlongJumpImage = new Image();
+  longlongJumpImage.src = "assets/longdou-jump.webp";
+  const doudouRunImages = [1, 2, 3, 4].map((frame) => {
+    const image = new Image();
+    image.fetchPriority = frame === 1 ? "high" : "low";
+    image.src = `assets/doudou-run-${frame}.png`;
+    return image;
+  });
+  const doudouJumpImage = new Image();
+  doudouJumpImage.src = "assets/doudou-jump.png";
+  const doudouVictoryImage = new Image();
+  doudouVictoryImage.fetchPriority = "high";
+  doudouVictoryImage.src = "assets/doudou-victory-full.png";
+  const familyImages = {};
+  for (const name of ["xiaojia-enter", "xiaojia-throw", "xiaoze-enter", "xiaoze-throw"]) {
+    familyImages[name] = new Image();
+    familyImages[name].src = `assets/${name}.png`;
+  }
   const clownSkateImages = [1, 2, 3, 4].map((frame) => {
     const image = new Image();
     image.fetchPriority = frame === 1 ? "high" : "low";
@@ -185,6 +205,7 @@
     { x: 69, y: 202, w: 289, h: 588 },
   ];
   const HERO_JUMP_CROP = { x: 368, y: 48, w: 744, h: 772 };
+  const DOUDOU_CROP = { x: 0, y: 0, w: 512, h: 512 };
   const CLOWN_SKATE_CROPS = [
     { x: 104, y: 254, w: 323, h: 487, anchorX: 136 },
     { x: 12, y: 256, w: 449, h: 485, anchorX: 248 },
@@ -202,19 +223,27 @@
   };
 
   const defaultSave = () => ({
-    scoreVersion: 2,
+    scoreVersion: 3,
     unlocked: 1,
     stars: [0, 0, 0, 0, 0, 0],
     scores: [0, 0, 0, 0, 0, 0],
+    scoresByCharacter: {
+      longlong: [0, 0, 0, 0, 0, 0],
+      doudou: [0, 0, 0, 0, 0, 0],
+    },
+    lastCharacter: "longlong",
     badges: [false, false, false, false, false, false],
     failures: [0, 0, 0, 0, 0, 0],
     attempts: [0, 0, 0, 0, 0, 0],
     championUnlocked: false,
     introSeen: false,
     tutorialDone: false,
+    familyTutorialDone: false,
   });
 
   let save = loadSave();
+  let selectedCharacter = save.lastCharacter || "longlong";
+  let characterSelectAction = null;
   let mode = "menu";
   let currentLevel = 0;
   let elapsed = 0;
@@ -231,6 +260,9 @@
   let fruit = 0;
   let boost = 0;
   let boostTime = 0;
+  let familyPower = 0;
+  let familyAssistTime = 0;
+  let familyCalls = 0;
   let chaseDistance = 82;
   let clownStun = 0;
   let score = 0;
@@ -373,6 +405,7 @@
         hitClown: () => { this.tone(170, .16, "sawtooth", .035); this.tone(110, .24, "sawtooth", .025, .1); },
         hurt: () => { this.tone(150, .22, "square", .04); },
         boost: () => { [260, 390, 520, 780].forEach((f, i) => this.tone(f, .18, "sawtooth", .025, i * .045)); },
+        family: () => { [392, 523, 659, 784, 988, 1175].forEach((f, i) => this.tone(f, .24, i % 2 ? "triangle" : "square", .036, i * .065)); },
         badge: () => { [520, 660, 780, 1040].forEach((f, i) => this.tone(f, .2, "triangle", .035, i * .08)); },
         record: () => { [659, 784, 988].forEach((f, i) => this.tone(f, .2, "triangle", .04, i * .07)); },
         champion: () => { [392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, .3, "triangle", .045, i * .1)); },
@@ -394,13 +427,30 @@
       for (const key of ["stars", "scores", "badges", "failures", "attempts"]) {
         normalized[key] = defaults[key].map((fallback, index) => stored[key]?.[index] ?? fallback);
       }
-      if (stored.scoreVersion !== 2) normalized.scores = [...defaults.scores];
-      normalized.scoreVersion = 2;
+      const legacyScores = stored.scoreVersion === 2 ? normalized.scores : defaults.scores;
+      normalized.scoresByCharacter = {
+        longlong: defaults.scores.map((fallback, index) => stored.scoresByCharacter?.longlong?.[index] ?? legacyScores[index] ?? fallback),
+        doudou: defaults.scores.map((fallback, index) => stored.scoresByCharacter?.doudou?.[index] ?? fallback),
+      };
+      normalized.lastCharacter = ["longlong", "doudou"].includes(stored.lastCharacter) ? stored.lastCharacter : "longlong";
+      normalized.scoreVersion = 3;
       normalized.championUnlocked ||= normalized.stars.reduce((total, value) => total + value, 0) >= 18;
       return normalized;
     } catch {
       return defaultSave();
     }
+  }
+
+  function activeScores() {
+    return save.scoresByCharacter[selectedCharacter];
+  }
+
+  function characterName() {
+    return selectedCharacter === "doudou" ? "豆豆" : "龙龙";
+  }
+
+  function characterTotal(key) {
+    return save.scoresByCharacter[key].reduce((total, value) => total + value, 0);
   }
 
   function persist() {
@@ -443,11 +493,44 @@
       const stars = "★".repeat(save.stars[index]) + "☆".repeat(3 - save.stars[index]);
       const detail = button.disabled
         ? "🔒 尚未解锁"
-        : `${stars} · 目标 ${level.targetScore} · 纪录 ${save.scores[index] || "—"}`;
+        : `${stars} · 目标 ${level.targetScore} · ${characterName()}纪录 ${activeScores()[index] || "—"}`;
       button.innerHTML = `<span class="level-number">第 ${index + 1} 关</span><b>${level.name}</b><small>${detail}</small>`;
       button.addEventListener("click", () => startLevel(index));
       grid.append(button);
     });
+  }
+
+  function renderCharacterSelect() {
+    document.querySelector("#longlongRecord").textContent = `六关纪录 ${characterTotal("longlong")} 分`;
+    document.querySelector("#doudouRecord").textContent = `六关纪录 ${characterTotal("doudou")} 分`;
+    document.querySelector("#chooseLonglongButton").classList.toggle("is-selected", selectedCharacter === "longlong");
+    document.querySelector("#chooseDoudouButton").classList.toggle("is-selected", selectedCharacter === "doudou");
+  }
+
+  function openCharacterSelect(nextAction) {
+    characterSelectAction = nextAction;
+    renderCharacterSelect();
+    mode = "characters";
+    frame.classList.remove("is-playing");
+    showScreen("characters");
+  }
+
+  function chooseCharacter(key) {
+    selectedCharacter = key;
+    save.lastCharacter = key;
+    persist();
+    renderLevelGrid();
+    const action = characterSelectAction;
+    characterSelectAction = null;
+    showToast(key === "doudou" ? "豆豆：看我的！" : "龙龙：冲呀！", 1200);
+    if (action) action();
+    else goMenu();
+  }
+
+  function syncStoryHero() {
+    const image = document.querySelector("#storyHero");
+    image.src = selectedCharacter === "doudou" ? "assets/doudou-victory-full.png" : "assets/longdou.webp";
+    image.alt = characterName();
   }
 
   function playStory(kind, nextAction) {
@@ -456,16 +539,17 @@
     const title = document.querySelector("#storyTitle");
     const text = document.querySelector("#storyText");
     const button = document.querySelector("#storyContinueButton");
+    syncStoryHero();
 
     if (kind === "intro") {
       kicker.textContent = "故事开始";
       title.textContent = "徽章被偷走了！";
-      text.textContent = "轮滑小丑偷走了海口的六枚城市徽章。龙豆抢回线索，追逐就此开始！";
+      text.textContent = `轮滑小丑偷走了海口的六枚城市徽章。${characterName()}抢回线索，小泽和小嘉也准备支援！`;
       button.textContent = "出发！";
     } else if (kind === "outro") {
       kicker.textContent = "海口大冒险完成";
       title.textContent = "六枚徽章回来了！";
-      text.textContent = "龙豆把徽章送回世纪大桥庆典。轮滑小丑刹车不及，一头滑进了彩色气球堆！";
+      text.textContent = `${characterName()}把徽章送回世纪大桥庆典。小泽和小嘉发动合击，小丑一头滑进了水果堆！`;
       button.textContent = "看看成绩";
     } else {
       const next = levelData[kind];
@@ -481,6 +565,10 @@
 
   function startAdventure() {
     audio.ensure();
+    openCharacterSelect(beginAdventure);
+  }
+
+  function beginAdventure() {
     if (!save.introSeen) {
       playStory("intro", () => {
         save.introSeen = true;
@@ -504,6 +592,9 @@
     fruit = 1;
     boost = 0;
     boostTime = 0;
+    familyPower = 0;
+    familyAssistTime = 0;
+    familyCalls = 0;
     chaseDistance = 82;
     clownStun = 0;
     score = 0;
@@ -544,11 +635,11 @@
     showScreen(null);
     frame.classList.add("is-playing");
     ui.practiceBadge.hidden = !practiceMode;
-    ui.levelName.textContent = `${levelData[index].place} · 第 ${index + 1} 关`;
+    ui.levelName.textContent = `${characterName()} · ${levelData[index].place} · 第 ${index + 1} 关`;
     ui.pauseButton.textContent = "Ⅱ";
     hideTutorial();
     audio.ensure();
-    showToast(practiceMode ? `练习模式 · 第 ${index + 1} 关` : `第 ${index + 1} 关 · ${levelData[index].name}`, 1800);
+    showToast(practiceMode ? `${characterName()}练习模式 · 第 ${index + 1} 关` : `${characterName()}：${selectedCharacter === "doudou" ? "看我的！" : "冲呀！"}`, 1800);
     lastTime = performance.now();
     cancelAnimationFrame(animationId);
     animationId = requestAnimationFrame(loop);
@@ -626,6 +717,49 @@
     }
   }
 
+  function chargeFamily(amount) {
+    if (familyAssistTime > 0) return;
+    const multiplier = practiceMode ? 1.35 : 1;
+    const wasReady = familyPower >= 100;
+    familyPower = Math.min(100, familyPower + amount * multiplier);
+    if (!wasReady && familyPower >= 100) {
+      audio.play("ready");
+      showToast("家人能量已满！", 1200);
+      if (currentLevel === 0 && !save.familyTutorialDone) {
+        showTutorial("👫", "兄妹合击已就绪", "按 G 或点击呼唤，小泽和小嘉来支援");
+      }
+    }
+  }
+
+  function triggerFamilyAssist() {
+    if (mode !== "playing" || familyPower < 100 || familyAssistTime > 0) {
+      if (mode === "playing" && familyPower < 100) showToast(`家人能量 ${Math.floor(familyPower)}%`);
+      return;
+    }
+    familyPower = 0;
+    familyAssistTime = 3;
+    familyCalls += 1;
+    clownStun = Math.max(clownStun, 3.4);
+    chaseDistance = Math.min(95, chaseDistance + 30);
+    for (const entity of entities) {
+      const inFront = entity.x > hero.x - 30 && entity.x < hero.x + 720;
+      if (!inFront || entity.dead) continue;
+      if (entity.type === "obstacle") {
+        entity.dead = true;
+        rewardAction(150);
+        addBurst(entity.x + entity.w / 2, entity.y + entity.h / 2, "#ffd45d", 10);
+      } else if (entity.type === "coin") {
+        collect(entity);
+      }
+    }
+    save.familyTutorialDone = true;
+    persist();
+    hideTutorial();
+    audio.play("family");
+    showToast("小泽＋小嘉 · 兄妹合击！", 1700);
+    updateHud();
+  }
+
   function spawnEntity(event) {
     const kind = event.kind;
     const specs = {
@@ -678,6 +812,7 @@
     updateCombo();
     const gained = basePoints * comboMultiplier;
     score += gained;
+    chargeFamily(basePoints >= 300 ? 15 : basePoints >= 150 ? 10 : 4);
     return gained;
   }
 
@@ -713,6 +848,7 @@
       fruit = Math.min(3, fruit + 1);
       comboStreak += 1;
       updateCombo();
+      chargeFamily(15);
       audio.play("pickup");
       showToast("捡到海南水果！");
       if (currentLevel === 0 && !tutorialFruitShown) {
@@ -752,6 +888,7 @@
     hero.invulnerable = Math.max(0, hero.invulnerable - dt);
     hero.landingTime = Math.max(0, hero.landingTime - dt);
     boostTime = Math.max(0, boostTime - dt);
+    familyAssistTime = Math.max(0, familyAssistTime - dt);
     clownStun = Math.max(0, clownStun - dt);
     screenShake = Math.max(0, screenShake - dt);
     chaseDistance = Math.min(92, chaseDistance + dt * (boostTime > 0 ? 5.5 : .42));
@@ -838,7 +975,7 @@
       showTutorial("⚡", "椰风冲刺已就绪", "按 Shift 或点击加速键");
     }
 
-    const bestScore = save.scores[currentLevel];
+    const bestScore = activeScores()[currentLevel];
     if (!practiceMode && bestScore > 0 && score > bestScore && !recordAnnounced) {
       recordAnnounced = true;
       audio.play("record");
@@ -881,18 +1018,19 @@
     mode = "result";
     frame.classList.remove("is-playing");
     hideTutorial();
-    const previousBest = save.scores[currentLevel];
+    const previousBest = activeScores()[currentLevel];
     const finalScore = won ? Math.floor(score + 1000 + energy * 300) : Math.floor(score);
     const stars = won ? calculateStars(finalScore) : 0;
     const newRecord = won && !practiceMode && finalScore > previousBest;
     resultSnapshot = {
       won, stars, coins, score: finalScore, badgeCollected, energy,
       collisions, maxComboMultiplier, previousBest, newRecord, practice: practiceMode,
+      character: characterName(), familyCalls,
     };
 
     if (won) {
       save.stars[currentLevel] = Math.max(save.stars[currentLevel], stars);
-      if (!practiceMode) save.scores[currentLevel] = Math.max(save.scores[currentLevel], finalScore);
+      if (!practiceMode) activeScores()[currentLevel] = Math.max(activeScores()[currentLevel], finalScore);
       save.badges[currentLevel] ||= badgeCollected;
       save.unlocked = Math.max(save.unlocked, Math.min(levelData.length, currentLevel + 2));
       if (!practiceMode) save.failures[currentLevel] = 0;
@@ -928,12 +1066,18 @@
     const record = document.querySelector("#resultRecord");
     const advice = document.querySelector("#resultAdvice");
     const champion = document.querySelector("#championReward");
+    const resultCharacter = document.querySelector("#resultCharacter");
     const level = levelData[currentLevel];
 
+    resultCharacter.src = selectedCharacter === "doudou"
+      ? result.won ? "assets/doudou-victory-full.png" : "assets/doudou-run-1.png"
+      : "assets/longdou.webp";
+    resultCharacter.alt = `${result.character}庆祝`;
+
     kicker.textContent = result.practice ? "练习模式成绩" : result.won ? `第 ${currentLevel + 1} 关完成` : "小丑追上来了";
-    title.textContent = result.won ? `${levelData[currentLevel].name} · 通过！` : "水果网救下了龙豆";
+    title.textContent = result.won ? `${result.character}通过${levelData[currentLevel].name}！` : `水果网救下了${result.character}`;
     stars.textContent = result.won ? `${"★ ".repeat(result.stars)}${"☆ ".repeat(3 - result.stars)}`.trim() : "☆ ☆ ☆";
-    summary.textContent = `金币 ${result.coins} · 碰撞 ${result.collisions} 次 · 最高连击 ×${result.maxComboMultiplier} · 得分 ${result.score}`;
+    summary.textContent = `金币 ${result.coins} · 合击 ${result.familyCalls} 次 · 碰撞 ${result.collisions} 次 · 最高连击 ×${result.maxComboMultiplier} · 得分 ${result.score}`;
 
     const goalStates = [
       [document.querySelector("#finishGoal"), result.won, "成功到达终点"],
@@ -1024,16 +1168,20 @@
     const airborne = hero.y < groundY - hero.h - 1;
     const runRate = boostTime > 0 ? 13.2 : 9.6;
     const runPosition = elapsed * runRate;
-    const runFrame = Math.floor(runPosition) % heroRunImages.length;
-    const jumpReady = heroJumpImage.complete && heroJumpImage.naturalWidth;
-    const selectedRunFrame = heroRunImages[runFrame].complete && heroRunImages[runFrame].naturalWidth ? runFrame : 0;
-    const image = airborne && jumpReady ? heroJumpImage : heroRunImages[selectedRunFrame];
-    const crop = airborne && jumpReady ? HERO_JUMP_CROP : HERO_RUN_CROPS[selectedRunFrame];
-    const drawH = hero.h;
-    const drawW = airborne ? 127 : drawH * crop.w / crop.h;
+    const runImages = selectedCharacter === "doudou" ? doudouRunImages : longlongRunImages;
+    const jumpImage = selectedCharacter === "doudou" ? doudouJumpImage : longlongJumpImage;
+    const runFrame = Math.floor(runPosition) % runImages.length;
+    const jumpReady = jumpImage.complete && jumpImage.naturalWidth;
+    const selectedRunFrame = runImages[runFrame].complete && runImages[runFrame].naturalWidth ? runFrame : 0;
+    const image = airborne && jumpReady ? jumpImage : runImages[selectedRunFrame];
+    const crop = selectedCharacter === "doudou"
+      ? DOUDOU_CROP
+      : airborne && jumpReady ? HERO_JUMP_CROP : HERO_RUN_CROPS[selectedRunFrame];
+    const drawH = selectedCharacter === "doudou" ? 165 : hero.h;
+    const drawW = selectedCharacter === "doudou" ? drawH : airborne ? 127 : drawH * crop.w / crop.h;
     const centerX = hero.x + hero.w / 2;
     const runBounce = airborne ? 0 : -Math.abs(Math.sin(runPosition * Math.PI / 2)) * 2.6;
-    const drawY = hero.y + runBounce;
+    const drawY = hero.y + hero.h - drawH + runBounce;
     const landingAmount = hero.landingTime > 0 ? Math.sin(hero.landingTime / .18 * Math.PI) : 0;
     const scaleX = 1 + landingAmount * .075;
     const scaleY = 1 - landingAmount * .09;
@@ -1095,6 +1243,60 @@
     ctx.restore();
   }
 
+  function drawFamilyAssist() {
+    if (familyAssistTime <= 0) return;
+    const phase = 3 - familyAssistTime;
+    const enter = Math.min(1, phase / .48);
+    const finale = Math.max(0, Math.min(1, (phase - 2.35) / .45));
+    const ease = (value) => 1 - (1 - value) ** 3;
+    const leftBase = -190 + ease(enter) * 355;
+    const rightBase = canvas.width + 10 - ease(enter) * 420;
+    const leftX = leftBase + finale * 255;
+    const rightX = rightBase - finale * 230;
+    const y = groundY - 214;
+    const size = 220;
+    const throwing = phase > .52 && phase < 2.4;
+    const leftImage = familyImages[throwing ? "xiaojia-throw" : "xiaojia-enter"];
+    const rightImage = familyImages[throwing ? "xiaoze-throw" : "xiaoze-enter"];
+
+    ctx.save();
+    if (save.championUnlocked) {
+      ctx.shadowColor = "#ffd43b";
+      ctx.shadowBlur = 18;
+    }
+    ctx.drawImage(leftImage, leftX, y, size, size);
+    ctx.drawImage(rightImage, rightX, y, size, size);
+    ctx.shadowBlur = 0;
+
+    if (throwing) {
+      const targetX = clownDrawX() + 60;
+      for (let i = 0; i < 7; i += 1) {
+        const travel = (phase * 1.35 + i * .17) % 1;
+        const fromLeft = i % 2 === 0;
+        const startX = fromLeft ? leftX + 145 : rightX + 62;
+        const startY = y + 90 + (i % 3) * 13;
+        const x = startX + (targetX - startX) * travel;
+        const arc = Math.sin(travel * Math.PI) * (70 + i * 4);
+        const fruitColors = ["#ffb126", "#8f5a2b", "#f05278", "#ffd74b"];
+        ctx.fillStyle = fruitColors[i % fruitColors.length];
+        ctx.strokeStyle = "#693f20";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(x, startY - arc, 12 + i % 3, 10 + (i + 1) % 3, travel * 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+    if (finale > .15) {
+      ctx.globalAlpha = Math.sin(finale * Math.PI);
+      ctx.font = "bold 50px system-ui";
+      ctx.fillStyle = "#fff06a";
+      ctx.fillText("✦", canvas.width / 2 - 16, groundY - 155);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
   function drawClown() {
     const x = clownDrawX();
     const h = 132;
@@ -1108,11 +1310,24 @@
     if (clownStun > 0) {
       const slipW = 158;
       ctx.translate(x + slipW / 2, y + h / 2 - 4);
-      ctx.rotate(Math.sin(elapsed * 15) * .12);
+      ctx.rotate(Math.sin(elapsed * 15) * .12 + (familyAssistTime > 0 ? Math.sin(elapsed * 10) * .08 : 0));
       ctx.drawImage(clownSlipImage, CLOWN_SLIP_CROP.x, CLOWN_SLIP_CROP.y, CLOWN_SLIP_CROP.w, CLOWN_SLIP_CROP.h, -slipW / 2, -h / 2, slipW, h);
       ctx.font = "bold 28px system-ui";
       ctx.fillText("✦", -68, -48);
       ctx.fillText("✦", 54, -55);
+      if (familyAssistTime > 0) {
+        ctx.save();
+        ctx.rotate(elapsed * 4);
+        ctx.font = "26px system-ui";
+        ctx.fillText("🎩", -8, -88);
+        ctx.restore();
+        ctx.font = "22px system-ui";
+        ctx.fillText("🥭🍍🥥", -55, 68);
+        ctx.fillStyle = Math.floor(elapsed * 10) % 2 ? "#ff2c38" : "#ff8990";
+        ctx.beginPath();
+        ctx.arc(14, -24, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else {
       const selectedSkateFrame = clownSkateImages[skateFrame].complete && clownSkateImages[skateFrame].naturalWidth ? skateFrame : 0;
       const image = clownSkateImages[selectedSkateFrame];
@@ -1251,6 +1466,7 @@
     entities.forEach(drawEntity);
     projectiles.forEach(drawProjectile);
     drawHero();
+    drawFamilyAssist();
     drawParticles();
     ctx.restore();
   }
@@ -1263,7 +1479,7 @@
     ui.fruit.textContent = `${fruit} / 3`;
     ui.score.textContent = String(Math.floor(score));
     ui.target.textContent = String(level.targetScore);
-    ui.best.textContent = String(save.scores[currentLevel] || "—");
+    ui.best.textContent = String(activeScores()[currentLevel] || "—");
     ui.combo.textContent = `连击 ×${comboMultiplier}`;
     ui.combo.classList.toggle("is-hot", comboMultiplier > 1);
     ui.practiceBadge.hidden = !practiceMode;
@@ -1273,6 +1489,9 @@
     ui.progressFill.style.width = `${progress}%`;
     ui.boostFill.style.width = `${boostTime > 0 ? 100 : boost}%`;
     ui.boostState.textContent = boostTime > 0 ? `${boostTime.toFixed(1)}秒` : boost >= 100 ? "就绪" : `${Math.floor(boost)}%`;
+    ui.familyFill.style.width = `${familyPower}%`;
+    ui.familyState.textContent = familyAssistTime > 0 ? "合击中" : familyPower >= 100 ? "就绪" : `${Math.floor(familyPower)}%`;
+    ui.familyButton.hidden = familyPower < 100 || familyAssistTime > 0;
     ui.throwButton.disabled = fruit <= 0;
     ui.boostButton.disabled = boost < 100 && boostTime <= 0;
   }
@@ -1293,6 +1512,8 @@
       event.preventDefault(); throwFruit();
     } else if (["ShiftLeft", "ShiftRight"].includes(event.code)) {
       event.preventDefault(); triggerBoost();
+    } else if (event.code === "KeyG") {
+      event.preventDefault(); triggerFamilyAssist();
     } else if (event.code === "Escape") {
       event.preventDefault(); togglePause();
     }
@@ -1305,10 +1526,14 @@
     if (!audioReady) showToast("点一下右上角的声音按钮开启音乐", 2400);
   });
   document.querySelector("#levelSelectButton").addEventListener("click", () => { renderLevelGrid(); showScreen("levels"); });
+  document.querySelector("#chooseLonglongButton").addEventListener("click", () => chooseCharacter("longlong"));
+  document.querySelector("#chooseDoudouButton").addEventListener("click", () => chooseCharacter("doudou"));
+  document.querySelector("#characterBackButton").addEventListener("click", goMenu);
   document.querySelector("#backToMenuButton").addEventListener("click", goMenu);
   document.querySelector("#clearProgressButton").addEventListener("click", () => {
     if (!window.confirm("确定清除《龙豆跑酷》的全部关卡进度吗？")) return;
     save = defaultSave();
+    selectedCharacter = "longlong";
     persist();
     renderLevelGrid();
     showToast("进度已清除");
@@ -1318,12 +1543,16 @@
   document.querySelector("#retryButton").addEventListener("click", () => startLevel(currentLevel, { practice: practiceMode }));
   document.querySelector("#practiceButton").addEventListener("click", () => startLevel(currentLevel, { practice: true }));
   document.querySelector("#nextButton").addEventListener("click", nextLevel);
+  document.querySelector("#changeCharacterButton").addEventListener("click", () => {
+    openCharacterSelect(() => startLevel(currentLevel, { practice: practiceMode }));
+  });
   document.querySelector("#resultMenuButton").addEventListener("click", goMenu);
   document.querySelector("#resumeButton").addEventListener("click", () => togglePause(false));
   document.querySelector("#pauseMenuButton").addEventListener("click", goMenu);
   ui.pauseButton.addEventListener("click", () => togglePause());
   ui.throwButton.addEventListener("click", (event) => { event.stopPropagation(); throwFruit(); });
   ui.boostButton.addEventListener("click", (event) => { event.stopPropagation(); triggerBoost(); });
+  ui.familyButton.addEventListener("click", (event) => { event.stopPropagation(); triggerFamilyAssist(); });
   async function toggleSound() {
     audio.enabled = !audio.enabled;
     if (audio.enabled) await audio.unlock();
@@ -1341,6 +1570,7 @@
   window.addEventListener("blur", () => { if (mode === "playing") togglePause(true); });
 
   renderLevelGrid();
+  renderCharacterSelect();
   updateHud();
 
   const waitForImage = (image) => new Promise((resolve) => {
@@ -1349,7 +1579,7 @@
   });
 
   Promise.all([
-    backgroundImages[0], heroRunImages[0], clownSkateImages[0],
+    backgroundImages[0], longlongRunImages[0], doudouRunImages[0], doudouVictoryImage, clownSkateImages[0],
   ].map(waitForImage)).then(() => {
     adventureButton.disabled = false;
     adventureButton.textContent = "开始冒险";
