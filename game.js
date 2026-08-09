@@ -4,6 +4,7 @@
   const canvas = document.querySelector("#gameCanvas");
   const ctx = canvas.getContext("2d");
   const frame = document.querySelector("#gameFrame");
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const ui = {
     levelName: document.querySelector("#levelName"),
@@ -136,18 +137,18 @@
     }));
   }
 
-  const longlongRunImages = [1, 2, 3, 4].map((frame) => {
+  const longlongRunImages = [1, 2, 3, 4, 5, 6].map((frame) => {
     const image = new Image();
     image.fetchPriority = frame === 1 ? "high" : "low";
-    image.src = `assets/longdou-run-${frame}.webp`;
+    image.src = `assets/longlong-run-v2-${frame}.png`;
     return image;
   });
   const longlongJumpImage = new Image();
   longlongJumpImage.src = "assets/longdou-jump.webp";
-  const doudouRunImages = [1, 2, 3, 4].map((frame) => {
+  const doudouRunImages = [1, 2, 3, 4, 5, 6].map((frame) => {
     const image = new Image();
     image.fetchPriority = frame === 1 ? "high" : "low";
-    image.src = `assets/doudou-run-${frame}.png`;
+    image.src = `assets/doudou-skate-v2-${frame}.png`;
     return image;
   });
   const doudouJumpImage = new Image();
@@ -198,14 +199,9 @@
     backgroundImages[0].addEventListener("error", preloadRemainingBackgrounds, { once: true });
   }
 
-  const HERO_RUN_CROPS = [
-    { x: 68, y: 192, w: 390, h: 596 },
-    { x: 90, y: 190, w: 285, h: 600 },
-    { x: 51, y: 199, w: 393, h: 593 },
-    { x: 69, y: 202, w: 289, h: 588 },
-  ];
+  const FULL_FRAME_CROP = { x: 0, y: 0, w: 512, h: 512 };
   const HERO_JUMP_CROP = { x: 368, y: 48, w: 744, h: 772 };
-  const DOUDOU_CROP = { x: 0, y: 0, w: 512, h: 512 };
+  const DOUDOU_CROP = FULL_FRAME_CROP;
   const CLOWN_SKATE_CROPS = [
     { x: 104, y: 254, w: 323, h: 487, anchorX: 136 },
     { x: 12, y: 256, w: 449, h: 485, anchorX: 248 },
@@ -247,6 +243,7 @@
   let mode = "menu";
   let currentLevel = 0;
   let elapsed = 0;
+  let locomotionDistance = 0;
   let lastTime = performance.now();
   let animationId = 0;
   let courseEvents = [];
@@ -582,6 +579,7 @@
 
   function resetRun() {
     elapsed = 0;
+    locomotionDistance = 0;
     courseEventIndex = 0;
     courseEvents = buildCourse(currentLevel, save.attempts[currentLevel]);
     entities = [];
@@ -884,6 +882,7 @@
     const progress = Math.min(1, elapsed / level.duration);
     const speed = level.speed * (practiceMode ? .82 : 1) * (boostTime > 0 ? 1.42 : 1);
     backgroundOffset += speed * dt * .22;
+    locomotionDistance += speed * dt;
 
     hero.invulnerable = Math.max(0, hero.invulnerable - dt);
     hero.landingTime = Math.max(0, hero.landingTime - dt);
@@ -1166,28 +1165,33 @@
     const flash = hero.invulnerable > 0 && Math.floor(hero.invulnerable * 12) % 2 === 0;
     if (flash) return;
     const airborne = hero.y < groundY - hero.h - 1;
-    const runRate = boostTime > 0 ? 13.2 : 9.6;
-    const runPosition = elapsed * runRate;
+    const isDoudou = selectedCharacter === "doudou";
     const runImages = selectedCharacter === "doudou" ? doudouRunImages : longlongRunImages;
     const jumpImage = selectedCharacter === "doudou" ? doudouJumpImage : longlongJumpImage;
+    const strideDistance = isDoudou ? 315 : 260;
+    const runCycle = locomotionDistance / strideDistance;
+    const runPosition = runCycle * runImages.length;
+    const runPhase = runCycle * Math.PI * 2;
     const runFrame = Math.floor(runPosition) % runImages.length;
     const jumpReady = jumpImage.complete && jumpImage.naturalWidth;
     const selectedRunFrame = runImages[runFrame].complete && runImages[runFrame].naturalWidth ? runFrame : 0;
     const image = airborne && jumpReady ? jumpImage : runImages[selectedRunFrame];
-    const crop = selectedCharacter === "doudou"
-      ? DOUDOU_CROP
-      : airborne && jumpReady ? HERO_JUMP_CROP : HERO_RUN_CROPS[selectedRunFrame];
-    const drawH = selectedCharacter === "doudou" ? 165 : hero.h;
-    const drawW = selectedCharacter === "doudou" ? drawH : airborne ? 127 : drawH * crop.w / crop.h;
+    const crop = airborne && jumpReady
+      ? isDoudou ? DOUDOU_CROP : HERO_JUMP_CROP
+      : FULL_FRAME_CROP;
+    const drawH = isDoudou ? 168 : airborne ? hero.h : 150;
+    const drawW = airborne && jumpReady && !isDoudou ? 127 : drawH;
     const centerX = hero.x + hero.w / 2;
-    const runBounce = airborne ? 0 : -Math.abs(Math.sin(runPosition * Math.PI / 2)) * 2.6;
-    const drawY = hero.y + hero.h - drawH + runBounce;
+    const runBounce = airborne || prefersReducedMotion ? 0 : -Math.abs(Math.sin(runPhase * 2)) * (isDoudou ? 1.8 : 2.8);
+    const groundInset = airborne ? 0 : isDoudou ? 11 : 12;
+    const drawY = hero.y + hero.h - drawH + runBounce + groundInset;
     const landingAmount = hero.landingTime > 0 ? Math.sin(hero.landingTime / .18 * Math.PI) : 0;
-    const scaleX = 1 + landingAmount * .075;
-    const scaleY = 1 - landingAmount * .09;
+    const airStretch = airborne && !prefersReducedMotion ? Math.max(-.025, Math.min(.035, -hero.vy / 22000)) : 0;
+    const scaleX = prefersReducedMotion ? 1 : 1 + landingAmount * .055 - airStretch * .45;
+    const scaleY = prefersReducedMotion ? 1 : 1 - landingAmount * .065 + airStretch;
     const tilt = airborne
-      ? Math.max(-.13, Math.min(.11, hero.vy / 5200))
-      : Math.sin(runPosition * Math.PI / 2) * .018;
+      ? prefersReducedMotion ? 0 : Math.max(-.12, Math.min(.09, hero.vy / 5600))
+      : prefersReducedMotion ? 0 : (isDoudou ? -.035 : -.018) - (boostTime > 0 ? .025 : 0) + Math.sin(runPhase) * .012;
 
     if (save.championUnlocked) {
       ctx.save();
@@ -1568,6 +1572,9 @@
   canvas.addEventListener("pointerdown", jump);
   window.addEventListener("keydown", handleKey, { passive: false });
   window.addEventListener("blur", () => { if (mode === "playing") togglePause(true); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && mode === "playing") togglePause(true);
+  });
 
   renderLevelGrid();
   renderCharacterSelect();
