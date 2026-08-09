@@ -137,7 +137,6 @@ button:focus-visible { outline: 4px solid white; outline-offset: 3px; }
 .menu-doudou { width: 52%; right: 33%; bottom: 2%; animation-delay: -.7s; }
 .menu-xiaoze { width: 36%; height: 48%; right: -4%; bottom: 1%; animation-delay: -.25s; }
 .menu-xiaojia { width: 38%; height: 50%; right: 52%; bottom: 0; animation-delay: -.95s; }
-img[src$="xiaojia-victory.png"] { clip-path: inset(1.7%); }
 .menu-clown { width: 45%; height: 48%; left: -2%; bottom: 10%; opacity: .94; animation: clownSkate 1.8s ease-in-out infinite; }
 .menu-copy { position: absolute; width: 46%; right: 3%; color: white; text-align: center; padding: 20px; }
 .menu-copy h2 { margin: 4px 0 8px; font-size: clamp(50px, 7vw, 104px); line-height: .9; letter-spacing: -.06em; text-shadow: 6px 6px 0 #0b2d33; }

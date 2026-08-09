@@ -133,7 +133,7 @@
     longlong: { name: "龙龙", type: "均衡型", callout: "冲呀！", cheers: ["太棒啦！", "再来一次！"], victory: "assets/longdou.webp", jump: "assets/longdou-jump.webp", supportSkill: "龙凤呈祥" },
     doudou: { name: "豆豆", type: "力量型", callout: "看我的！", cheers: ["我赢啦！", "继续挑战！"], victory: "assets/doudou-victory-full.png", jump: "assets/doudou-jump.png", supportSkill: "龙凤呈祥" },
     xiaoze: { name: "小泽", type: "敏捷型", callout: "我来啦！", cheers: ["我做到了！", "还要再跑！"], victory: "assets/xiaoze-victory.png", jump: "assets/xiaoze-jump.png", supportSkill: "兄弟同心" },
-    xiaojia: { name: "小嘉", type: "收集型", callout: "一起加油！", cheers: ["我们成功啦！", "三星真漂亮！"], victory: "assets/xiaojia-victory.png", jump: "assets/xiaojia-jump.png", supportSkill: "兄弟同心" },
+    xiaojia: { name: "小嘉", type: "收集型", callout: "一起加油！", cheers: ["我们成功啦！", "三星真漂亮！"], victory: "assets/xiaojia-victory-clean.png", jump: "assets/xiaojia-jump.png", supportSkill: "兄弟同心" },
   };
   const CHARACTER_KEYS = Object.keys(CHARACTER_CONFIG);
 
@@ -195,7 +195,7 @@
   const xiaozeHurtImage = new Image(); xiaozeHurtImage.src = "assets/xiaoze-hurt.png";
   const xiaojiaHurtImage = new Image(); xiaojiaHurtImage.src = "assets/xiaojia-hurt.png";
   const xiaozeVictoryImage = new Image(); xiaozeVictoryImage.src = "assets/xiaoze-victory.png";
-  const xiaojiaVictoryImage = new Image(); xiaojiaVictoryImage.src = "assets/xiaojia-victory.png";
+  const xiaojiaVictoryImage = new Image(); xiaojiaVictoryImage.src = "assets/xiaojia-victory-clean.png";
   const characterImages = {
     longlong: { run: longlongRunImages, jump: longlongJumpImage, hurt: longlongRunImages[0], victory: null },
     doudou: { run: doudouRunImages, jump: doudouJumpImage, hurt: doudouRunImages[0], victory: doudouVictoryImage },
