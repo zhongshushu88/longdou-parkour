@@ -1586,11 +1586,14 @@
     const selectedRunFrame = runImages[runFrame].complete && runImages[runFrame].naturalWidth ? runFrame : 0;
     const hurtReady = hero.invulnerable > 1.35 && selectedImages.hurt?.complete && selectedImages.hurt.naturalWidth;
     const image = hurtReady ? selectedImages.hurt : airborne && jumpReady ? jumpImage : runImages[selectedRunFrame];
+    const imageWidth = image.naturalWidth || image.width;
+    const imageHeight = image.naturalHeight || image.height;
+    const edgeInset = selectedCharacter === "xiaojia" ? 4 : 0;
     const completeImageCrop = {
-      x: 0,
-      y: 0,
-      w: image.naturalWidth || image.width,
-      h: image.naturalHeight || image.height,
+      x: edgeInset,
+      y: edgeInset,
+      w: imageWidth - edgeInset * 2,
+      h: imageHeight - edgeInset * 2,
     };
     const crop = airborne && jumpReady && isLonglong ? HERO_JUMP_CROP : completeImageCrop;
     const drawH = isDoudou ? 168 : selectedCharacter === "xiaoze" ? 146 : selectedCharacter === "xiaojia" ? 158 : airborne ? hero.h : 150;
@@ -1665,14 +1668,16 @@
     const enter = Math.min(1, phase / .48);
     const finale = Math.max(0, Math.min(1, (phase - 2.35) / .45));
     const ease = (value) => 1 - (1 - value) ** 3;
+    const siblingSupport = usesSiblingSupport();
     const leftBase = -190 + ease(enter) * 355;
     const rightBase = canvas.width + 10 - ease(enter) * 420;
-    const leftX = leftBase + finale * 255;
-    const rightX = rightBase - finale * 230;
-    const y = groundY - 214;
-    const size = 220;
+    const alignedX = canvas.width + 180 - ease(enter) * (canvas.width - hero.x + 20) + finale * (canvas.width - hero.x + 220);
+    const leftX = siblingSupport ? leftBase + finale * 255 : alignedX;
+    const rightX = siblingSupport ? rightBase - finale * 230 : alignedX;
+    const size = siblingSupport ? 220 : 190;
+    const leftY = siblingSupport ? groundY - 214 : groundY - 274;
+    const rightY = siblingSupport ? groundY - 214 : groundY - 174;
     const throwing = phase > .52 && phase < 2.4;
-    const siblingSupport = usesSiblingSupport();
     const leftKey = siblingSupport ? "xiaojia" : "longlong";
     const rightKey = siblingSupport ? "xiaoze" : "doudou";
     const leftImage = familyImages[`${leftKey}-${throwing ? "throw" : "enter"}`];
@@ -1683,8 +1688,19 @@
       ctx.shadowColor = "#ffd43b";
       ctx.shadowBlur = 18;
     }
-    ctx.drawImage(leftImage, leftX, y, size, size);
-    ctx.drawImage(rightImage, rightX, y, size, size);
+    if (!siblingSupport) {
+      ctx.strokeStyle = "rgba(255,240,106,.75)";
+      ctx.lineWidth = 7;
+      ctx.lineCap = "round";
+      for (const laneY of [leftY + size * .78, rightY + size * .78]) {
+        ctx.beginPath();
+        ctx.moveTo(leftX - 90, laneY);
+        ctx.lineTo(leftX + 45, laneY);
+        ctx.stroke();
+      }
+    }
+    ctx.drawImage(leftImage, leftX, leftY, size, size);
+    ctx.drawImage(rightImage, rightX, rightY, size, size);
     ctx.shadowBlur = 0;
 
     if (throwing) {
@@ -1693,7 +1709,7 @@
         const travel = (phase * 1.35 + i * .17) % 1;
         const fromLeft = i % 2 === 0;
         const startX = fromLeft ? leftX + 145 : rightX + 62;
-        const startY = y + 90 + (i % 3) * 13;
+        const startY = (fromLeft ? leftY : rightY) + 90 + (i % 3) * 13;
         const x = startX + (targetX - startX) * travel;
         const arc = Math.sin(travel * Math.PI) * (70 + i * 4);
         const fruitColors = ["#ffb126", "#8f5a2b", "#f05278", "#ffd74b"];
